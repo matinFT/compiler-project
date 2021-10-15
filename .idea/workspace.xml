@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="ad9cdaac-e2ad-4ed9-be3d-3df7d48557ef" name="Default Changelist" comment="" />
+    <list default="true" id="ad9cdaac-e2ad-4ed9-be3d-3df7d48557ef" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/compiler.py" beforeDir="false" afterPath="$PROJECT_DIR$/compiler.py" afterDir="false" />
+    </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -9,7 +12,7 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="CoverageDataManager">
-    <SUITE FILE_PATH="coverage/compiler_project$compiler.coverage" NAME="compiler Coverage Results" MODIFIED="1634216340383" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/compiler_project$compiler.coverage" NAME="compiler Coverage Results" MODIFIED="1634323711588" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/codes$compiler.coverage" NAME="compiler Coverage Results" MODIFIED="1633709855084" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
   <component name="FileEditorManager">
@@ -17,8 +20,25 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/compiler.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="495">
-              <caret line="15" column="12" lean-forward="true" selection-start-line="15" selection-start-column="12" selection-end-line="15" selection-end-column="12" />
+            <state relative-caret-position="278">
+              <caret line="113" column="30" selection-start-line="113" selection-start-column="30" selection-end-line="113" selection-end-column="30" />
+              <folding>
+                <element signature="e#1403#2052#0" />
+                <element signature="e#2385#2984#0" />
+                <element signature="e#3048#3739#0" />
+                <element signature="e#3740#4165#0" />
+                <element signature="e#5147#5361#0" />
+                <element signature="e#4720#5089#0" />
+                <element signature="e#4087#4358#0" />
+                <element signature="e#5548#5950#0" />
+                <element signature="e#5176#5621#0" />
+                <element signature="e#5668#5884#0" />
+                <element signature="e#5931#6124#0" />
+                <element signature="e#6241#6536#0" />
+                <element signature="e#6600#6718#0" />
+                <element signature="e#8706#9388#0" />
+                <element signature="e#9474#9855#0" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -31,6 +51,15 @@
         <option value="Python Script" />
       </list>
     </option>
+  </component>
+  <component name="FindInProjectRecents">
+    <findStrings>
+      <find>next_char</find>
+      <find>s</find>
+    </findStrings>
+    <replaceStrings>
+      <replace>self.last_char</replace>
+    </replaceStrings>
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -53,8 +82,8 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
-      <pane id="ProjectPane" />
       <pane id="Scope" />
+      <pane id="ProjectPane" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -116,23 +145,24 @@
       <option name="presentableId" value="Default" />
       <updated>1633709599174</updated>
       <workItem from="1633709607284" duration="1174000" />
-      <workItem from="1634214297044" duration="2823000" />
+      <workItem from="1634214297044" duration="9075000" />
+      <workItem from="1634297385924" duration="16235000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="3997000" />
+    <option name="totallyTimeSpent" value="26484000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="-8" y="-8" width="1936" height="1066" extended-state="6" />
     <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.2524013" />
+      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.25506938" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" />
-      <window_info active="true" anchor="bottom" id="Run" order="2" visible="true" weight="0.1783029" />
+      <window_info active="true" anchor="bottom" id="Run" order="2" visible="true" weight="0.21052632" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
@@ -156,8 +186,25 @@
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/compiler.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="495">
-          <caret line="15" column="12" lean-forward="true" selection-start-line="15" selection-start-column="12" selection-end-line="15" selection-end-column="12" />
+        <state relative-caret-position="278">
+          <caret line="113" column="30" selection-start-line="113" selection-start-column="30" selection-end-line="113" selection-end-column="30" />
+          <folding>
+            <element signature="e#1403#2052#0" />
+            <element signature="e#2385#2984#0" />
+            <element signature="e#3048#3739#0" />
+            <element signature="e#3740#4165#0" />
+            <element signature="e#5147#5361#0" />
+            <element signature="e#4720#5089#0" />
+            <element signature="e#4087#4358#0" />
+            <element signature="e#5548#5950#0" />
+            <element signature="e#5176#5621#0" />
+            <element signature="e#5668#5884#0" />
+            <element signature="e#5931#6124#0" />
+            <element signature="e#6241#6536#0" />
+            <element signature="e#6600#6718#0" />
+            <element signature="e#8706#9388#0" />
+            <element signature="e#9474#9855#0" />
+          </folding>
         </state>
       </provider>
     </entry>
