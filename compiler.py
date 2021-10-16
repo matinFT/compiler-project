@@ -4,13 +4,15 @@
 # state7_symbol_ascii = ' '.join([str(ord(x)) for x in ";:,[]{}+-*<"])
 
 alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-whitespace = "\n\r\t\v\f"
+whitespace = "\n\r\t\v\f "
 numbers = "0123456789"
-state7_symbols = ";:,[]{}+-<"
-ligal_characters = alphabet + whitespace + numbers + state7_symbols + "*/="
+state7_symbols = ";:,[]{}+-<()"
+legal_characters = alphabet + whitespace + numbers + state7_symbols + "*/="
 
 # see if can have characters like []{} after number. not having error now
-# if anything except * comes after / takes / as error. maybe /# comes then what ?
+# if anything except * or / comes after /, takes / as error. maybe /# comes then what ? two error?
+# checked till 7
+
 
 class Compiler:
     symbol_table = {"if": "KEYWORD",
@@ -30,6 +32,7 @@ class Compiler:
         self.current_line = 1
         self.comment_start_line = -1
         self.last_char = ""
+        self.write_symbols()
 
     def next_token(self):
         token = ""
@@ -44,6 +47,12 @@ class Compiler:
                     self.last_char = self.file.read(1)
                     token = self.last_char
                     if self.last_char == "":
+                        self.file.close()
+                        self.symbol_file.close()
+                        self.tokens_file.close()
+                        if self.error_file.tell() == 0:
+                            self.error_file.write("There is no lexical error.")
+                        self.error_file.close()
                         return None
                     if self.last_char in whitespace:
                         if self.last_char == "\n":
@@ -63,23 +72,20 @@ class Compiler:
                         state = 16
                     else:
                         # fill for panic
-                        pass
+                        self.write_error("({}, Invalid input)".format(token))
+                        return self.next_token()
                 elif state == 1:
                     return "whitespace", token
                 elif state == 2:
                     self.last_char = self.file.read(1)
                     if self.last_char.isdigit():
                         token += self.last_char
-                    elif self.last_char.isalpha():
+                    elif self.last_char.isalpha() or self.last_char not in legal_characters:
                         # fill for panic
-                        self.write_error("({}, Invalid number".format(token))
+                        self.write_error("({}, Invalid number".format(token + self.last_char))
                         return self.next_token()
-                    elif self.last_char in ligal_characters:
-                        state = 8
-                    else:
-                        # fill for panic
-                        self.write_error("({}, Invalid number".format(token))
-                        return self.next_token()
+                    # not alpha or digit but in legal characters
+                    state = 8
                 elif state == 3:
                     self.last_char = self.file.read(1)
                     if self.last_char == "*":
@@ -100,27 +106,28 @@ class Compiler:
                     if self.last_char == "=":
                         token += self.last_char
                         state = 6
-                    elif self.last_char in ligal_characters:
+                    elif self.last_char in legal_characters:
                         state = 5
                     else:
                         # fill for panic
-                        self.errors.append((self.current_line, ("/", "Invalid input")))
+                        self.write_error("({}, Invalid input".format(token + self.last_char))
                         return self.next_token()
                 elif state == 5:
                     if self.last_char != "":
                         self.file.seek(self.file.tell() - 1)
-                    self.write_token(("SYMBOL", "="))
+                    self.write_token("(SYMBOL, =)")
                     return "SYMBOL", "="
                 elif state == 6:
+                    self.write_token("(SYMBOL, ==)")
                     return "SYMBOL", "=="
                 elif state == 7:
+                    self.write_token("(SYMBOL, {})".format(token))
                     return "SYMBOL", token
                 elif state == 8:
                     if self.last_char != "":
                         self.file.seek(self.file.tell() - 1)
-                    if self.last_char == "\n":
-                        self.new_line()
-                    return ("NUM", token)
+                    self.write_token("(NUM, {})".format(token))
+                    return "NUM", token
                 elif state == 9:
                     self.last_char = self.file.read(1)
                     token += self.last_char
@@ -130,12 +137,11 @@ class Compiler:
                         state = 12
                     elif self.last_char == "":
                         # fill with error
-                        self.errors.append((self.comment_start_line, (token, "Unclosed comment")))
+                        self.write_error("({}, Unclosed comment".format(token))
                         return None
                 elif state == 10:
                     self.last_char = self.file.read(1)
                     if self.last_char == "\n":
-                        self.current_line += 1
                         state = 14
                     elif self.last_char == "":
                         state = 14
@@ -145,13 +151,13 @@ class Compiler:
                     self.last_char = self.file.read(1)
                     if self.last_char.isalnum():
                         token += self.last_char
-                    elif self.last_char in ligal_characters:
+                    elif self.last_char in legal_characters:
                         if self.last_char == "\n":
                             self.current_line += 1
                         state = 13
                     else:
                         # fill with panic
-                        self.errors.append((self.current_line, (token, "Invalid input")))
+                        self.write_error("({}, Invalid input".format(token + self.last_char))
                         return self.next_token()
                 elif state == 12:
                     self.last_char = self.file.read(1)
@@ -162,42 +168,44 @@ class Compiler:
                     elif self.last_char == "/":
                         state = 15
                     elif self.last_char == "":
-                        # fill with error
-                        pass
+                        self.write_error("({}, Unclosed comment".format(token), True)
+                        return None
                     elif self.last_char != "*":
                         state = 9
                 elif state == 13:
-                    if token in self.symbol_table:
-                        token_type = self.symbol_table[token]
-                        return token_type, token
-                    self.symbol_table[token] = "ID"
-                    return "ID", token
+                    if self.last_char != "":
+                        self.file.seek(self.file.tell() - 1)
+                    token_type = self.get_token(token)
+                    self.write_token("({}, {})".format(token_type, token))
+                    return token_type, token
                 elif state == 14:
-                    if self.last_char == "":
-                        return "COMMENT", token
+                    if self.last_char != "":
+                        self.file.seek(self.file.tell() - 1)
                     # last_char is \n
-                    self.file.seek(self.file.tell()-1)
+                    # self.write_token("(COMMENT, {})".format(token))
                     return "COMMENT", token
                 elif state == 15:
+                    # self.write_token("(COMMENT, {})".format(token))
                     return "COMMENT", token
                 elif state == 16:
                     self.last_char = self.file.read(1)
                     if self.last_char == "/":
                         # fill with error
-                        pass
-                    elif self.last_char in ligal_characters:
+                        self.write_error("({}, Unmatched comment".format(token + self.last_char))
+                        return self.next_token()
+                    elif self.last_char in legal_characters:
                         state = 17
                     else:
                         # fill with panic
-                        pass
+                        self.write_error("({}, Invalid input".format(token + self.last_char))
+                        return self.next_token()
                 elif state == 17:
                     if self.last_char != "":
                         self.file.seek(self.file.tell() - 1)
+                    self.write_token("(SYMBOL, *)")
                     return "SYMBOL", "*"
         else:
             return None
-
-    # def write_token(self, token):
 
     def new_line(self):
         self.current_line += 1
@@ -217,37 +225,46 @@ class Compiler:
             if last_char != "\n":
                 self.error_file.write("\n")
 
-    def write_error(self, error):
+    def write_error(self, error, unclosed_comment=False):
+        error_line = self.current_line if not unclosed_comment else self.comment_start_line
         last_char = "\n"
-        if self.symbol_file.tell() != 0:
-            self.symbol_file.seek(self.symbol_file.tell() - 1)
-            last_char = self.symbol_file.read(1)
+        if self.error_file.tell() != 0:
+            self.error_file.seek(self.error_file.tell() - 1)
+            last_char = self.error_file.read(1)
         if last_char == "\n":
-            self.symbol_file.write("{}.\t".format(self.current_line) + error + " ")
+            self.error_file.write("{}.\t".format(error_line) + error + " ")
         else:
-            self.symbol_file.write(error + " ")
+            self.error_file.write(error + " ")
+
+    def write_token(self, token):
+        last_char = "\n"
+        if self.tokens_file.tell() != 0:
+            self.tokens_file.seek(self.tokens_file.tell() - 1)
+            last_char = self.tokens_file.read(1)
+        if last_char == "\n":
+            self.tokens_file.write("{}.\t".format(self.current_line) + token + " ")
+        else:
+            self.tokens_file.write(token + " ")
+
+    def get_token(self, token):
+        if token in self.symbol_table:
+            return self.symbol_table[token]
+        else:
+            self.symbol_table[token] = "ID"
+            self.symbol_file.write("{}.\t{}\n".format(len(self.symbol_table), token))
+            return "ID"
+
+    def write_symbols(self):
+        symbol_num = 1
+        for symbol in self.symbol_table:
+            self.symbol_file.write("{}.\t{}\n".format(symbol_num, symbol))
+            symbol_num += 1
 
 
-# f = open("../HW1/Practical/PA1_testcases1.2/T01/input.txt", "r")
-
-# for i in range(300):
-#     a = f.read(1)
-#     if a == "":
-#         break
-#     print(a)
-#     # print(ord(a))
-# f.seek(f.tell() - 1)
-# a = f.read(1)
-# print(a)
-
-
-symbol_file = open("../symbol.txt", 'w+')
-
-symbol_file.seek(symbol_file.tell() - 1)
-print(symbol_file.read(1))
-# symbol_file.write("hello")
-# symbol_file.write("come sa yamas")
-# symbol_file.write("\n\tzahre mar")
-#
-# if symbol_file.closed:
-#     print("yes")
+a = Compiler("../HW1/Practical/PA1_testcases1.2/T03/input.txt")
+# a = Compiler("input.txt")
+while True:
+    t = a.next_token()
+    if t == None:
+        break
+    print(t)

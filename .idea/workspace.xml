@@ -12,7 +12,7 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="CoverageDataManager">
-    <SUITE FILE_PATH="coverage/compiler_project$compiler.coverage" NAME="compiler Coverage Results" MODIFIED="1634323711588" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/compiler_project$compiler.coverage" NAME="compiler Coverage Results" MODIFIED="1634415808739" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/codes$compiler.coverage" NAME="compiler Coverage Results" MODIFIED="1633709855084" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
   <component name="FileEditorManager">
@@ -20,24 +20,34 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/compiler.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="278">
-              <caret line="113" column="30" selection-start-line="113" selection-start-column="30" selection-end-line="113" selection-end-column="30" />
+            <state relative-caret-position="286">
+              <caret line="264" column="14" selection-start-line="264" selection-start-column="14" selection-end-line="264" selection-end-column="14" />
               <folding>
-                <element signature="e#1403#2052#0" />
-                <element signature="e#2385#2984#0" />
-                <element signature="e#3048#3739#0" />
-                <element signature="e#3740#4165#0" />
-                <element signature="e#5147#5361#0" />
-                <element signature="e#4720#5089#0" />
-                <element signature="e#4087#4358#0" />
-                <element signature="e#5548#5950#0" />
-                <element signature="e#5176#5621#0" />
-                <element signature="e#5668#5884#0" />
-                <element signature="e#5931#6124#0" />
-                <element signature="e#6241#6536#0" />
-                <element signature="e#6600#6718#0" />
-                <element signature="e#8706#9388#0" />
-                <element signature="e#9474#9855#0" />
+                <element signature="e#759#1054#0" />
+                <element signature="e#1098#1422#0" />
+                <element signature="e#1429#8874#0" />
+                <element signature="e#1782#2869#0" />
+                <element signature="e#3003#3507#0" />
+                <element signature="e#3561#4229#0" />
+                <element signature="e#4283#4750#0" />
+                <element signature="e#4804#4982#0" />
+                <element signature="e#5036#5110#0" />
+                <element signature="e#5164#5239#0" />
+                <element signature="e#5187#5312#0" />
+                <element signature="e#5366#5845#0" />
+                <element signature="e#5900#6219#0" />
+                <element signature="e#6274#6810#0" />
+                <element signature="e#6865#7354#0" />
+                <element signature="e#7591#7851#0" />
+                <element signature="e#7696#7905#0" />
+                <element signature="e#8232#8331#0" />
+                <element signature="e#8378#8901#0" />
+                <element signature="e#8437#8563#0" />
+                <element signature="e#8636#9349#0" />
+                <element signature="e#9635#9980#0" />
+                <element signature="e#9782#10127#0" />
+                <element signature="e#10358#10512#0" />
+                <element signature="e#11351#11509#0" />
               </folding>
             </state>
           </provider>
@@ -56,9 +66,15 @@
     <findStrings>
       <find>next_char</find>
       <find>s</find>
+      <find>ligal</find>
+      <find>KEYWORD</find>
+      <find>write_error</find>
+      <find>write_token</find>
+      <find>symbol_file</find>
     </findStrings>
     <replaceStrings>
       <replace>self.last_char</replace>
+      <replace>legal</replace>
     </replaceStrings>
   </component>
   <component name="Git.Settings">
@@ -146,23 +162,25 @@
       <updated>1633709599174</updated>
       <workItem from="1633709607284" duration="1174000" />
       <workItem from="1634214297044" duration="9075000" />
-      <workItem from="1634297385924" duration="16235000" />
+      <workItem from="1634297385924" duration="17302000" />
+      <workItem from="1634390003924" duration="82000" />
+      <workItem from="1634409135637" duration="4649000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="26484000" />
+    <option name="totallyTimeSpent" value="32282000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="-8" y="-8" width="1936" height="1066" extended-state="6" />
     <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.25506938" />
+      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.26040554" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" />
-      <window_info active="true" anchor="bottom" id="Run" order="2" visible="true" weight="0.21052632" />
+      <window_info active="true" anchor="bottom" id="Run" order="2" visible="true" weight="0.2008593" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
@@ -186,24 +204,34 @@
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/compiler.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="278">
-          <caret line="113" column="30" selection-start-line="113" selection-start-column="30" selection-end-line="113" selection-end-column="30" />
+        <state relative-caret-position="286">
+          <caret line="264" column="14" selection-start-line="264" selection-start-column="14" selection-end-line="264" selection-end-column="14" />
           <folding>
-            <element signature="e#1403#2052#0" />
-            <element signature="e#2385#2984#0" />
-            <element signature="e#3048#3739#0" />
-            <element signature="e#3740#4165#0" />
-            <element signature="e#5147#5361#0" />
-            <element signature="e#4720#5089#0" />
-            <element signature="e#4087#4358#0" />
-            <element signature="e#5548#5950#0" />
-            <element signature="e#5176#5621#0" />
-            <element signature="e#5668#5884#0" />
-            <element signature="e#5931#6124#0" />
-            <element signature="e#6241#6536#0" />
-            <element signature="e#6600#6718#0" />
-            <element signature="e#8706#9388#0" />
-            <element signature="e#9474#9855#0" />
+            <element signature="e#759#1054#0" />
+            <element signature="e#1098#1422#0" />
+            <element signature="e#1429#8874#0" />
+            <element signature="e#1782#2869#0" />
+            <element signature="e#3003#3507#0" />
+            <element signature="e#3561#4229#0" />
+            <element signature="e#4283#4750#0" />
+            <element signature="e#4804#4982#0" />
+            <element signature="e#5036#5110#0" />
+            <element signature="e#5164#5239#0" />
+            <element signature="e#5187#5312#0" />
+            <element signature="e#5366#5845#0" />
+            <element signature="e#5900#6219#0" />
+            <element signature="e#6274#6810#0" />
+            <element signature="e#6865#7354#0" />
+            <element signature="e#7591#7851#0" />
+            <element signature="e#7696#7905#0" />
+            <element signature="e#8232#8331#0" />
+            <element signature="e#8378#8901#0" />
+            <element signature="e#8437#8563#0" />
+            <element signature="e#8636#9349#0" />
+            <element signature="e#9635#9980#0" />
+            <element signature="e#9782#10127#0" />
+            <element signature="e#10358#10512#0" />
+            <element signature="e#11351#11509#0" />
           </folding>
         </state>
       </provider>
