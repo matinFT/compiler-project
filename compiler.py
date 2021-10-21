@@ -1,8 +1,3 @@
-# alphabet_ascii = ' '.join([str(ord(x)) for x in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"])
-# whitespace_ascii = ' '.join([str(ord(x)) for x in "\n\r\t\v\f"])
-# numbers_ascii = ' '.join([str(ord(x)) for x in "0123456789"])
-# state7_symbol_ascii = ' '.join([str(ord(x)) for x in ";:,[]{}+-*<"])
-
 alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 whitespace = "\n\r\t\v\f "
 numbers = "0123456789"
@@ -21,7 +16,7 @@ class Compiler:
                     "return": "KEYWORD"}
 
     def __init__(self, filepath):
-        #
+        # setting files
         self.file = open(filepath, "r")
         self.symbol_file = open("symbol_table.txt", "w+")
         self.error_file = open("lexical_errors.txt", "w+")
@@ -32,16 +27,16 @@ class Compiler:
         self.last_pos = 0
         self.write_symbols()
 
+    # returns next valid token. returns None if reaches EOF
     def next_token(self):
         token = ""
         state = 0
         if not self.file.closed:
             while True:
+                # deciding what to do in every state based on input character
                 if state == 0:
                     self.last_pos = self.file.tell()
                     self.last_char = self.file.read(1)
-                    # print(self.last_char)
-                    # print("state 0: ", self.last_char)
                     token = self.last_char
                     if self.last_char == "":
                         # self.new_line()
@@ -98,9 +93,15 @@ class Compiler:
                         state = 10
                     else:
                         # fill for error
-                        if self.last_char != "":
-                            self.file.seek(self.last_pos)
-                        self.write_error("({}, Invalid input)".format(token))
+                        if self.last_char in legal_characters:
+                            if self.last_char != "":
+                                self.file.seek(self.last_pos)
+                            self.write_error("({}, Invalid input)".format(token))
+                        else:
+                            self.write_error("({}, Invalid input)".format(token + self.last_char))
+                        # if self.last_char != "":
+                        #     self.file.seek(self.last_pos)
+                        # self.write_error("({}, Invalid input)".format(token))
                         return self.next_token()
                 elif state == 4:
                     self.last_pos = self.file.tell()
@@ -223,6 +224,7 @@ class Compiler:
         else:
             return None
 
+    # manages new line in files and self.current_line for one \n
     def new_line(self):
         self.current_line += 1
         if self.tokens_file.tell() != 0:
@@ -241,6 +243,7 @@ class Compiler:
             if last_char != "\n":
                 self.error_file.write("\n")
 
+    # writes error to error file. manages line numbers in error file too
     def write_error(self, error, unclosed_comment=False):
         error_line = self.current_line if not unclosed_comment else self.comment_start_line
         last_char = "\n"
@@ -252,6 +255,7 @@ class Compiler:
         else:
             self.error_file.write(error + " ")
 
+    # writes token to tokens file. manages line numbers in error file too
     def write_token(self, token):
         last_char = "\n"
         if self.tokens_file.tell() != 0:
@@ -262,6 +266,7 @@ class Compiler:
         else:
             self.tokens_file.write(token + " ")
 
+    # returns token's type. puts token in symbol table at first appearance
     def get_token(self, token):
         if token in self.symbol_table:
             return self.symbol_table[token]
@@ -270,6 +275,7 @@ class Compiler:
             self.symbol_file.write("{}.\t{}\n".format(len(self.symbol_table), token))
             return "ID"
 
+    # writes the KEYWORDS to symbol file
     def write_symbols(self):
         symbol_num = 1
         for symbol in self.symbol_table:
@@ -277,7 +283,7 @@ class Compiler:
             symbol_num += 1
 
 
-# a = Compiler("../HW1/Practical/tests/tests/PA1_input_output_samples/T02/input.txt")
+# a = Compiler("../HW1/Practical/tests/tests/PA1_input_output_samples/T07/input.txt")
 a = Compiler("input.txt")
 while True:
     t = a.next_token()
