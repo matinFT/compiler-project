@@ -13,7 +13,8 @@ class Compiler:
                     "repeat": "KEYWORD",
                     "break": "KEYWORD",
                     "until": "KEYWORD",
-                    "return": "KEYWORD"}
+                    "return": "KEYWORD",
+                    "endif": "KEYWORD"}
 
     def __init__(self, filepath):
         # setting files
@@ -27,7 +28,7 @@ class Compiler:
         self.last_pos = 0
         self.write_symbols()
 
-    # returns next valid token. returns None if reaches EOF
+    # returns next valid token. returns $ if reaches EOF
     def next_token(self):
         token = ""
         state = 0
@@ -46,7 +47,7 @@ class Compiler:
                         if self.error_file.tell() == 0:
                             self.error_file.write("There is no lexical error.")
                         self.error_file.close()
-                        return None
+                        return "$"
                     if self.last_char in whitespace:
                         if self.last_char == "\n":
                             self.new_line()
@@ -147,7 +148,7 @@ class Compiler:
                             error_string = token
                         self.write_error("({}, Unclosed comment)".format(error_string), True)
                         # self.new_line()
-                        return None
+                        return "$"
                 elif state == 10:
                     self.last_pos = self.file.tell()
                     self.last_char = self.file.read(1)
@@ -182,15 +183,12 @@ class Compiler:
                     elif self.last_char == "":
                         self.write_error("({}, Unclosed comment)".format(token), True)
                         # self.new_line()
-                        return None
+                        return "$"
                     elif self.last_char != "*":
                         state = 9
                 elif state == 13:
-                    # print("state 13: ", self.last_char)
-                    # print("state ", self.file.tell())
                     if self.last_char != "":
                         self.file.seek(self.last_pos)
-                    # print("state ", self.file.tell())
                     token_type = self.get_token(token)
                     self.write_token("({}, {})".format(token_type, token))
                     return token_type, token
@@ -222,7 +220,7 @@ class Compiler:
                     self.write_token("(SYMBOL, *)")
                     return "SYMBOL", "*"
         else:
-            return None
+            return "$"
 
     # manages new line in files and self.current_line for one \n
     def new_line(self):
@@ -287,7 +285,7 @@ class Compiler:
 a = Compiler("input.txt")
 while True:
     t = a.next_token()
-    if t is None:
+    if t == "$":
         break
 #     print(t)
 
