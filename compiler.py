@@ -1,11 +1,4 @@
-alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-whitespace = "\n\r\t\v\f "
-numbers = "0123456789"
-state7_symbols = ";:,[]{}+-<()"
-legal_characters = alphabet + whitespace + numbers + state7_symbols + "*/="
-
-
-class Compiler:
+class Scanner:
     symbol_table = {"if": "KEYWORD",
                     "else": "KEYWORD",
                     "void": "KEYWORD",
@@ -15,6 +8,11 @@ class Compiler:
                     "until": "KEYWORD",
                     "return": "KEYWORD",
                     "endif": "KEYWORD"}
+    alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    whitespace = "\n\r\t\v\f "
+    numbers = "0123456789"
+    state7_symbols = ";:,[]{}+-<()"
+    legal_characters = alphabet + whitespace + numbers + state7_symbols + "*/="
 
     def __init__(self, filepath):
         # setting files
@@ -48,7 +46,7 @@ class Compiler:
                             self.error_file.write("There is no lexical error.")
                         self.error_file.close()
                         return "$"
-                    if self.last_char in whitespace:
+                    if self.last_char in self.whitespace:
                         if self.last_char == "\n":
                             self.new_line()
                         state = 1
@@ -58,7 +56,7 @@ class Compiler:
                         state = 3
                     elif self.last_char == "=":
                         state = 4
-                    elif self.last_char in state7_symbols:
+                    elif self.last_char in self.state7_symbols:
                         state = 7
                     elif self.last_char.isalpha():
                         state = 11
@@ -75,7 +73,7 @@ class Compiler:
                     self.last_char = self.file.read(1)
                     if self.last_char.isdigit():
                         token += self.last_char
-                    elif self.last_char.isalpha() or self.last_char not in legal_characters:
+                    elif self.last_char.isalpha() or self.last_char not in self.legal_characters:
                         # fill for panic
                         self.write_error("({}, Invalid number)".format(token + self.last_char))
                         return self.next_token()
@@ -94,7 +92,7 @@ class Compiler:
                         state = 10
                     else:
                         # fill for error
-                        if self.last_char in legal_characters:
+                        if self.last_char in self.legal_characters:
                             if self.last_char != "":
                                 self.file.seek(self.last_pos)
                             self.write_error("({}, Invalid input)".format(token))
@@ -110,7 +108,7 @@ class Compiler:
                     if self.last_char == "=":
                         token += self.last_char
                         state = 6
-                    elif self.last_char in legal_characters:
+                    elif self.last_char in self.legal_characters:
                         state = 5
                     else:
                         # fill for panic
@@ -165,7 +163,7 @@ class Compiler:
                     # print(self.last_char)
                     if self.last_char.isalnum():
                         token += self.last_char
-                    elif self.last_char in legal_characters:
+                    elif self.last_char in self.legal_characters:
                         state = 13
                     else:
                         # fill with panic
@@ -208,7 +206,7 @@ class Compiler:
                         # fill with error
                         self.write_error("({}, Unmatched comment)".format(token + self.last_char))
                         return self.next_token()
-                    elif self.last_char in legal_characters:
+                    elif self.last_char in self.legal_characters:
                         state = 17
                     else:
                         # fill with panic
@@ -281,11 +279,21 @@ class Compiler:
             symbol_num += 1
 
 
-# a = Compiler("../HW1/Practical/tests/tests/PA1_input_output_samples/T07/input.txt")
-a = Compiler("input.txt")
+class Parser:
+    first_sets = {"Program": ["$", "int", "void"],
+                  }
+    follow_sets = {"Program": ["$"],
+                   }
+
+    def __init__(self):
+        self.scanner = Scanner()
+        pass
+
+
+a = Scanner("../HW1/Practical/tests/tests/PA1_input_output_samples/T05/input.txt")
+# a = Compiler("input.txt")
 while True:
     t = a.next_token()
     if t == "$":
         break
-#     print(t)
 
