@@ -67,7 +67,8 @@ class Scanner:
                         self.write_error("({}, Invalid input)".format(token))
                         return self.next_token()
                 elif state == 1:
-                    return "whitespace", token
+                    return self.next_token()
+                    # return "whitespace", token
                 elif state == 2:
                     self.last_pos = self.file.tell()
                     self.last_char = self.file.read(1)
@@ -281,13 +282,161 @@ class Scanner:
 
 class Parser:
     first_sets = {"Program": ["$", "int", "void"],
+                  "Declaration_list": ["int", "void"],
+                  "Declaration": ["int", "void"],
+                  "Declaration_initial": ["int", "void"],
+                  "Declaration_prime": ["(", ";", "["],
+                  "Var_declaration_prime": [";", "["],
+                  "Fun_declaration_prime": ["("],
+                  "Type_specifier": ["int", "void"],
+                  "Params": ["int", "void"],
+                  "Param_list": [","],
+                  "Param": ["int", "void"],
+                  "Param_prime": ["["],
+                  "Compound_stmt": ["{"],
+                  "Statement_list": ["{", "break", ";", "if", "repeat", "return", "ID", "(", "NUM"],
+                  "Statement": ["{", "break", ";", "if", "repeat", "return", "ID", "(", "NUM"],
+                  "Expression_stmt": ["break", ";", "ID", "(", "NUM"],
+                  "Selection_stmt": ["if"],
+                  "Else_stmt": ["endif", "else"],
+                  "Iteration_stmt": ["repeat"],
+                  "Return_stmt": ["return"],
+                  "Return_stmt_prime": [";", "ID", "(", "NUM"],
+                  "Expression": ["ID", "(", "NUM"],
+                  "B": ["=", "(", "[", "*", "+", "-", "<", "==",   ],
+                  "H": ["=", "*", "+", "-", "<", "=="],
+                  "Simple_expression_zegond": ["(", "NUM"],
+                  "Simple_expression_prime": ["(", "*", "+", "-", "<", "=="],
+                  "C": ["<", "=="],
+                  "Relop": ["<", "=="],
+                  "Additive_expression": ["(", "ID", "NUM"],
+                  "Additive_expression_prime": ["(", "*", "+", "-"],
+                  "Additive_expression_zegond": ["(", "NUM"],
+                  "D": ["+", "-"],
+                  "Addop": ["+", "-"],
+                  "Term": ["(", "ID", "NUM"],
+                  "Term_prime": ["(", "*"],
+                  "Term_zegond": ["(", "NUM"],
+                  "G": ["*"],
+                  "Factor": ["(", "ID", "NUM"],
+                  "Var_call_prime": ["(", "["],
+                  "Var_prime": ["["],
+                  "Factor_prime": ["("],
+                  "Factor_zegond": ["(", "NUM"],
+                  "Args": ["ID", "(", "NUM"],
+                  "Arg_list": ["ID", "(", "NUM"],
+                  "Arg_list_prime": [","],
                   }
-    follow_sets = {"Program": ["$"],
+
+    follow_sets = {"Program": [],
+                   "Declaration_list": ["$", "{", "break", ";", "if", "repeat", "return", "ID", "(", "NUM", "}"],
+                   "Declaration": ["int", "void", "$", "{", "break", ";", "if", "repeat", "return", "ID", "(", "NUM", "}"],
+                   "Declaration_initial": ["(", ";", "[", ",", ")"],
+                   "Declaration_prime": ["int", "void", "$", "{", "break", ";", "if", "repeat", "return", "ID", "(",
+                                         "NUM", "}"],
+                   "Var_declaration_prime": ["int", "void", "$", "{", "break", ";", "if", "repeat", "return", "ID", "(",
+                                             "NUM", "}"],
+                   "Fun_declaration_prime": ["int", "void", "$", "{", "break", ";", "if", "repeat", "return", "ID", "(",
+                                             "NUM", "}"],
+                   "Type_specifier": ["ID"],
+                   "Params": [")"],
+                   "Param_list": [")"],
+                   "Param": [",", ")"],
+                   "Param_prime": [",", ")"],
+                   "Compound_stmt": ["int", "void", "$", "{", "break", ";", "if", "repeat", "return", "ID", "(", "NUM",
+                                     "}", "endif", "else", "until"],
+                   "Statement_list": ["}"],
+                   "Statement": ["{", "break", ";", "if", "repeat", "return", "ID", "(", "NUM", "}", "endif", "else",
+                                 "until"],
+                   "Expression_stmt": ["{", "break", ";", "if", "repeat", "return", "ID", "(", "NUM", "}", "endif",
+                                       "else", "until"],
+                   "Selection_stmt": ["{", "break", ";", "if", "repeat", "return", "ID", "(", "NUM", "}", "endif",
+                                      "else", "until"],
+                   "Else_stmt": ["{", "break", ";", "if", "repeat", "return", "ID", "(", "NUM", "}", "endif", "else",
+                                 "until"],
+                   "Iteration_stmt": ["{", "break", ";", "if", "repeat", "return", "ID", "(", "NUM", "}", "endif",
+                                      "else", "until"],
+                   "Return_stmt": ["{", "break", ";", "if", "repeat", "return", "ID", "(", "NUM", "}", "endif", "else",
+                                   "until"],
+                   "Return_stmt_prime": ["{", "break", ";", "if", "repeat", "return", "ID", "(", "NUM", "}", "endif",
+                                         "else", "until"],
+                   "Expression": [";", ")", "|", "]", ","],
+                   "B": [";", ")", "|", "]", ","],
+                   "H": [";", ")", "|", "]", ","],
+                   "Simple_expression_zegond": [";", ")", "|", "]", ","],
+                   "Simple_expression_prime": [";", ")", "|", "]", ","],
+                   "C": [";", ")", "|", "]", ","],
+                   "Relop": ["(", "ID", "NUM"],
+                   "Additive_expression": [";", ")", "|", "]", ","],
+                   "Additive_expression_prime": ["<", "==", ";", ")", "|", "]", ","],
+                   "Additive_expression_zegond": ["<", "==", ";", ")", "|", "]", ","],
+                   "D": ["<", "==", ";", ")", "|", "]", ","],
+                   "Addop": ["(", "ID", "NUM"],
+                   "Term": ["+", "-", ";", ")", "<", "==", "|", "]", ","],
+                   "Term_prime": ["+", "-", ";", ")", "<", "==", "|", "]", ","],
+                   "Term_zegond": ["+", "-", ";", ")", "<", "==", "|", "]", ","],
+                   "G": ["+", "-", ";", ")", "<", "==", "|", "]", ","],
+                   "Factor": ["*", "+", "-", ";", ")", "<", "==", "|", "]", ","],
+                   "Var_call_prime": ["*", "+", "-", ";", ")", "<", "==", "|", "]", ","],
+                   "Var_prime": ["*", "+", "-", ";", ")", "<", "==", "|", "]", ","],
+                   "Factor_prime": ["*", "+", "-", ";", ")", "<", "==", "|", "]", ","],
+                   "Factor_zegond": ["*", "+", "-", ";", ")", "<", "==", "|", "]", ","],
+                   "Args": [")"],
+                   "Arg_list": [")"],
+                   "Arg_list_prime": [")"],
                    }
 
-    def __init__(self):
-        self.scanner = Scanner()
+    def __init__(self, filepath):
+        self.input_filename = filepath
+        self.scanner = Scanner(filepath)
+        self.parse_file = open("parse_tree.txt", 'w')
+        self.error_file = open("syntax_errors.txt", 'w')
+        self.look_ahead = self.scanner.next_token()
+
+    def start(self):
+        root_node = Node("Program ", False)
+        self.parse(1, root_node)
+
+    def write_parse_tree(self, root_node):
         pass
+
+    def parse(self, state, node):
+        if state == 1:
+            if self.look_ahead not in self.first_sets["Declaration_list"]:
+                if self.panic_mode(1, node):
+                    node.add_child(Node("Declaration_list", False))
+                    self.parse(2, node)
+                else:
+                    self.parse(1, node)
+            else:
+                child_node = Node("Declaration_list", False)
+                node.add_child(child_node)
+                self.parse(4, child_node)
+
+            # self.panic_mode()
+            pass
+
+    #
+    #     codes for state 1 to 80
+    #
+
+    #
+    #     codes for state 81 to 158
+    #
+
+    def panic_mode(self, state, node):  # returns true if we should go to next state. else False
+
+        pass
+
+
+class Node:
+    def __init__(self, value, is_terminal):
+        self.value = value
+        self.is_terminal = is_terminal
+        self.children = []
+
+    def add_child(self, node):
+        self.children.append(node)
 
 
 a = Scanner("../HW1/Practical/tests/tests/PA1_input_output_samples/T05/input.txt")
@@ -296,4 +445,3 @@ while True:
     t = a.next_token()
     if t == "$":
         break
-
