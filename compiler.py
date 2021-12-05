@@ -281,110 +281,189 @@ class Scanner:
 
 
 class Parser:
-    first_sets = {"Program": ["$", "int", "void"],
-                  "Declaration_list": ["int", "void"],
-                  "Declaration": ["int", "void"],
-                  "Declaration_initial": ["int", "void"],
-                  "Declaration_prime": ["(", ";", "["],
-                  "Var_declaration_prime": [";", "["],
-                  "Fun_declaration_prime": ["("],
-                  "Type_specifier": ["int", "void"],
-                  "Params": ["int", "void"],
-                  "Param_list": [","],
-                  "Param": ["int", "void"],
-                  "Param_prime": ["["],
-                  "Compound_stmt": ["{"],
-                  "Statement_list": ["{", "break", ";", "if", "repeat", "return", "ID", "(", "NUM"],
-                  "Statement": ["{", "break", ";", "if", "repeat", "return", "ID", "(", "NUM"],
-                  "Expression_stmt": ["break", ";", "ID", "(", "NUM"],
-                  "Selection_stmt": ["if"],
-                  "Else_stmt": ["endif", "else"],
-                  "Iteration_stmt": ["repeat"],
-                  "Return_stmt": ["return"],
-                  "Return_stmt_prime": [";", "ID", "(", "NUM"],
-                  "Expression": ["ID", "(", "NUM"],
-                  "B": ["=", "(", "[", "*", "+", "-", "<", "==",   ],
-                  "H": ["=", "*", "+", "-", "<", "=="],
-                  "Simple_expression_zegond": ["(", "NUM"],
-                  "Simple_expression_prime": ["(", "*", "+", "-", "<", "=="],
-                  "C": ["<", "=="],
-                  "Relop": ["<", "=="],
-                  "Additive_expression": ["(", "ID", "NUM"],
-                  "Additive_expression_prime": ["(", "*", "+", "-"],
-                  "Additive_expression_zegond": ["(", "NUM"],
-                  "D": ["+", "-"],
-                  "Addop": ["+", "-"],
-                  "Term": ["(", "ID", "NUM"],
-                  "Term_prime": ["(", "*"],
-                  "Term_zegond": ["(", "NUM"],
-                  "G": ["*"],
-                  "Factor": ["(", "ID", "NUM"],
-                  "Var_call_prime": ["(", "["],
-                  "Var_prime": ["["],
-                  "Factor_prime": ["("],
-                  "Factor_zegond": ["(", "NUM"],
-                  "Args": ["ID", "(", "NUM"],
-                  "Arg_list": ["ID", "(", "NUM"],
-                  "Arg_list_prime": [","],
-                  }
+    # a dictionary with grammar symbols as it's keys. every key is mapped to another dictionary
+    # containing first_set, follow_set, is_terminal attribute of that symbol
+    symbols = {'Program': {'first_set': ['$', 'int', 'void'], 'follow_set': [], 'is_terminal': False},
+               'Declaration-list': {'first_set': ['int', 'void'],
+                                    'follow_set': ['$', '{', 'break', ';', 'if', 'repeat', 'return', 'ID', '(', 'NUM',
+                                                   '}'],
+                                    'is_terminal': False}, 'Declaration': {'first_set': ['int', 'void'],
+                                                                           'follow_set': ['int', 'void', '$', '{',
+                                                                                          'break',
+                                                                                          ';',
+                                                                                          'if', 'repeat', 'return',
+                                                                                          'ID', '(',
+                                                                                          'NUM', '}'],
+                                                                           'is_terminal': False},
+               'Declaration-initial': {'first_set': ['int', 'void'], 'follow_set': ['(', ';', '[', ',', ')'],
+                                       'is_terminal': False}, 'Declaration-prime': {'first_set': ['(', ';', '['],
+                                                                                    'follow_set': ['int', 'void', '$',
+                                                                                                   '{',
+                                                                                                   'break', ';', 'if',
+                                                                                                   'repeat',
+                                                                                                   'return', 'ID', '(',
+                                                                                                   'NUM',
+                                                                                                   '}'],
+                                                                                    'is_terminal': False},
+               'Var-declaration-prime': {'first_set': [';', '['],
+                                         'follow_set': ['int', 'void', '$', '{', 'break', ';', 'if', 'repeat', 'return',
+                                                        'ID',
+                                                        '(', 'NUM', '}'], 'is_terminal': False},
+               'Fun-declaration-prime': {'first_set': ['('],
+                                         'follow_set': ['int', 'void', '$', '{', 'break', ';', 'if', 'repeat', 'return',
+                                                        'ID',
+                                                        '(', 'NUM', '}'], 'is_terminal': False},
+               'Type-specifier': {'first_set': ['int', 'void'], 'follow_set': ['ID'], 'is_terminal': False},
+               'Params': {'first_set': ['int', 'void'], 'follow_set': [')'], 'is_terminal': False},
+               'Param-list': {'first_set': [','], 'follow_set': [')'], 'is_terminal': False},
+               'Param': {'first_set': ['int', 'void'], 'follow_set': [',', ')'], 'is_terminal': False},
+               'Param-prime': {'first_set': ['['], 'follow_set': [',', ')'], 'is_terminal': False},
+               'Compound-stmt': {'first_set': ['{'],
+                                 'follow_set': ['int', 'void', '$', '{', 'break', ';', 'if', 'repeat', 'return', 'ID',
+                                                '(',
+                                                'NUM',
+                                                '}', 'endif', 'else', 'until'], 'is_terminal': False},
+               'Statement-list': {'first_set': ['{', 'break', ';', 'if', 'repeat', 'return', 'ID', '(', 'NUM'],
+                                  'follow_set': ['}'], 'is_terminal': False},
+               'Statement': {'first_set': ['{', 'break', ';', 'if', 'repeat', 'return', 'ID', '(', 'NUM'],
+                             'follow_set': ['{', 'break', ';', 'if', 'repeat', 'return', 'ID', '(', 'NUM', '}', 'endif',
+                                            'else',
+                                            'until'], 'is_terminal': False},
+               'Expression-stmt': {'first_set': ['break', ';', 'ID', '(', 'NUM'],
+                                   'follow_set': ['{', 'break', ';', 'if', 'repeat', 'return', 'ID', '(', 'NUM', '}',
+                                                  'endif',
+                                                  'else', 'until'], 'is_terminal': False},
+               'Selection-stmt': {'first_set': ['if'],
+                                  'follow_set': ['{',
+                                                 'break',
+                                                 ';',
+                                                 'if',
+                                                 'repeat',
+                                                 'return',
+                                                 'ID',
+                                                 '(',
+                                                 'NUM',
+                                                 '}',
+                                                 'endif',
+                                                 'else',
+                                                 'until'],
+                                  'is_terminal': False},
+               'Else-stmt': {'first_set': ['endif', 'else'],
+                             'follow_set': ['{', 'break', ';', 'if', 'repeat', 'return', 'ID', '(', 'NUM', '}', 'endif',
+                                            'else',
+                                            'until'], 'is_terminal': False}, 'Iteration-stmt': {'first_set': ['repeat'],
+                                                                                                'follow_set': ['{',
+                                                                                                               'break',
+                                                                                                               ';',
+                                                                                                               'if',
+                                                                                                               'repeat',
+                                                                                                               'return',
+                                                                                                               'ID',
+                                                                                                               '(',
+                                                                                                               'NUM',
+                                                                                                               '}',
+                                                                                                               'endif',
+                                                                                                               'else',
+                                                                                                               'until'],
+                                                                                                'is_terminal': False},
+               'Return-stmt': {'first_set': ['return'],
+                               'follow_set': ['{', 'break', ';', 'if', 'repeat', 'return', 'ID', '(', 'NUM', '}',
+                                              'endif',
+                                              'else',
+                                              'until'], 'is_terminal': False},
+               'Return-stmt-prime': {'first_set': [';', 'ID', '(', 'NUM'],
+                                     'follow_set': ['{', 'break', ';', 'if', 'repeat', 'return', 'ID', '(', 'NUM', '}',
+                                                    'endif',
+                                                    'else', 'until'], 'is_terminal': False},
+               'Expression': {'first_set': ['ID', '(', 'NUM'], 'follow_set': [';', ')', '|', ']', ','],
+                              'is_terminal': False},
+               'B': {'first_set': ['=', '(', '[', '*', '+', '-', '<', '=='], 'follow_set': [';', ')', '|', ']', ','],
+                     'is_terminal': False},
+               'H': {'first_set': ['=', '*', '+', '-', '<', '=='], 'follow_set': [';', ')', '|', ']', ','],
+                     'is_terminal': False},
+               'Simple-expression-zegond': {'first_set': ['(', 'NUM'], 'follow_set': [';', ')', '|', ']', ','],
+                                            'is_terminal': False},
+               'Simple-expression-prime': {'first_set': ['(', '*', '+', '-', '<', '=='],
+                                           'follow_set': [';', ')', '|', ']', ','],
+                                           'is_terminal': False},
+               'C': {'first_set': ['<', '=='], 'follow_set': [';', ')', '|', ']', ','], 'is_terminal': False},
+               'Relop': {'first_set': ['<', '=='], 'follow_set': ['(', 'ID', 'NUM'], 'is_terminal': False},
+               'Additive-expression': {'first_set': ['(', 'ID', 'NUM'], 'follow_set': [';', ')', '|', ']', ','],
+                                       'is_terminal': False},
+               'Additive-expression-prime': {'first_set': ['(', '*', '+', '-'],
+                                             'follow_set': ['<', '==', ';',
+                                                            ')',
+                                                            '|', ']', ','],
+                                             'is_terminal': False},
+               'Additive-expression-zegond': {'first_set': ['(', 'NUM'],
+                                              'follow_set': ['<', '==', ';', ')', '|', ']', ','],
+                                              'is_terminal': False},
+               'D': {'first_set': ['+', '-'], 'follow_set': ['<', '==', ';', ')', '|', ']', ','], 'is_terminal': False},
+               'Addop': {'first_set': ['+', '-'], 'follow_set': ['(', 'ID', 'NUM'], 'is_terminal': False},
+               'Term': {'first_set': ['(', 'ID', 'NUM'], 'follow_set': ['+', '-', ';', ')', '<', '==', '|', ']', ','],
+                        'is_terminal': False},
+               'Term-prime': {'first_set': ['(', '*'], 'follow_set': ['+', '-', ';', ')', '<', '==', '|', ']', ','],
+                              'is_terminal': False},
+               'Term-zegond': {'first_set': ['(', 'NUM'], 'follow_set': ['+', '-', ';', ')', '<', '==', '|', ']', ','],
+                               'is_terminal': False},
+               'G': {'first_set': ['*'], 'follow_set': ['+', '-', ';', ')', '<', '==', '|', ']', ','],
+                     'is_terminal': False},
+               'Factor': {'first_set': ['(', 'ID', 'NUM'],
+                          'follow_set': ['*', '+', '-', ';', ')', '<', '==', '|', ']', ','],
+                          'is_terminal': False},
+               'Var-call-prime': {'first_set': ['(', '['],
+                                  'follow_set': ['*', '+', '-', ';', ')', '<', '==', '|', ']', ','],
+                                  'is_terminal': False},
+               'Var-prime': {'first_set': ['['], 'follow_set': ['*', '+', '-', ';', ')', '<', '==', '|', ']', ','],
+                             'is_terminal': False},
+               'Factor-prime': {'first_set': ['('], 'follow_set': ['*', '+', '-', ';', ')', '<', '==', '|', ']', ','],
+                                'is_terminal': False},
+               'Factor-zegond': {'first_set': ['(', 'NUM'],
+                                 'follow_set': ['*', '+', '-', ';', ')', '<', '==', '|', ']', ','],
+                                 'is_terminal': False},
+               'Args': {'first_set': ['ID', '(', 'NUM'], 'follow_set': [')'], 'is_terminal': False},
+               'Arg-list': {'first_set': ['ID', '(', 'NUM'], 'follow_set': [')'], 'is_terminal': False},
+               'Arg-list-prime': {'first_set': [','], 'follow_set': [')'], 'is_terminal': False},
 
-    follow_sets = {"Program": [],
-                   "Declaration_list": ["$", "{", "break", ";", "if", "repeat", "return", "ID", "(", "NUM", "}"],
-                   "Declaration": ["int", "void", "$", "{", "break", ";", "if", "repeat", "return", "ID", "(", "NUM", "}"],
-                   "Declaration_initial": ["(", ";", "[", ",", ")"],
-                   "Declaration_prime": ["int", "void", "$", "{", "break", ";", "if", "repeat", "return", "ID", "(",
-                                         "NUM", "}"],
-                   "Var_declaration_prime": ["int", "void", "$", "{", "break", ";", "if", "repeat", "return", "ID", "(",
-                                             "NUM", "}"],
-                   "Fun_declaration_prime": ["int", "void", "$", "{", "break", ";", "if", "repeat", "return", "ID", "(",
-                                             "NUM", "}"],
-                   "Type_specifier": ["ID"],
-                   "Params": [")"],
-                   "Param_list": [")"],
-                   "Param": [",", ")"],
-                   "Param_prime": [",", ")"],
-                   "Compound_stmt": ["int", "void", "$", "{", "break", ";", "if", "repeat", "return", "ID", "(", "NUM",
-                                     "}", "endif", "else", "until"],
-                   "Statement_list": ["}"],
-                   "Statement": ["{", "break", ";", "if", "repeat", "return", "ID", "(", "NUM", "}", "endif", "else",
-                                 "until"],
-                   "Expression_stmt": ["{", "break", ";", "if", "repeat", "return", "ID", "(", "NUM", "}", "endif",
-                                       "else", "until"],
-                   "Selection_stmt": ["{", "break", ";", "if", "repeat", "return", "ID", "(", "NUM", "}", "endif",
-                                      "else", "until"],
-                   "Else_stmt": ["{", "break", ";", "if", "repeat", "return", "ID", "(", "NUM", "}", "endif", "else",
-                                 "until"],
-                   "Iteration_stmt": ["{", "break", ";", "if", "repeat", "return", "ID", "(", "NUM", "}", "endif",
-                                      "else", "until"],
-                   "Return_stmt": ["{", "break", ";", "if", "repeat", "return", "ID", "(", "NUM", "}", "endif", "else",
-                                   "until"],
-                   "Return_stmt_prime": ["{", "break", ";", "if", "repeat", "return", "ID", "(", "NUM", "}", "endif",
-                                         "else", "until"],
-                   "Expression": [";", ")", "|", "]", ","],
-                   "B": [";", ")", "|", "]", ","],
-                   "H": [";", ")", "|", "]", ","],
-                   "Simple_expression_zegond": [";", ")", "|", "]", ","],
-                   "Simple_expression_prime": [";", ")", "|", "]", ","],
-                   "C": [";", ")", "|", "]", ","],
-                   "Relop": ["(", "ID", "NUM"],
-                   "Additive_expression": [";", ")", "|", "]", ","],
-                   "Additive_expression_prime": ["<", "==", ";", ")", "|", "]", ","],
-                   "Additive_expression_zegond": ["<", "==", ";", ")", "|", "]", ","],
-                   "D": ["<", "==", ";", ")", "|", "]", ","],
-                   "Addop": ["(", "ID", "NUM"],
-                   "Term": ["+", "-", ";", ")", "<", "==", "|", "]", ","],
-                   "Term_prime": ["+", "-", ";", ")", "<", "==", "|", "]", ","],
-                   "Term_zegond": ["+", "-", ";", ")", "<", "==", "|", "]", ","],
-                   "G": ["+", "-", ";", ")", "<", "==", "|", "]", ","],
-                   "Factor": ["*", "+", "-", ";", ")", "<", "==", "|", "]", ","],
-                   "Var_call_prime": ["*", "+", "-", ";", ")", "<", "==", "|", "]", ","],
-                   "Var_prime": ["*", "+", "-", ";", ")", "<", "==", "|", "]", ","],
-                   "Factor_prime": ["*", "+", "-", ";", ")", "<", "==", "|", "]", ","],
-                   "Factor_zegond": ["*", "+", "-", ";", ")", "<", "==", "|", "]", ","],
-                   "Args": [")"],
-                   "Arg_list": [")"],
-                   "Arg_list_prime": [")"],
-                   }
+               # terminals from here
+               '$': {'first_set': '$', 'follow_set': [], 'is_terminal': True},
+               'int': {'first_set': 'int', 'follow_set': [], 'is_terminal': True},
+               'void': {'first_set': 'void', 'follow_set': [], 'is_terminal': True},
+               '(': {'first_set': '(', 'follow_set': [], 'is_terminal': True},
+               ')': {'first_set': ')', 'follow_set': [], 'is_terminal': True},
+               '[': {'first_set': '[', 'follow_set': [], 'is_terminal': True},
+               ']': {'first_set': ']', 'follow_set': [], 'is_terminal': True},
+               ';': {'first_set': ';', 'follow_set': [], 'is_terminal': True},
+               '{': {'first_set': '{', 'follow_set': [], 'is_terminal': True},
+               '}': {'first_set': '}', 'follow_set': [], 'is_terminal': True},
+               'break': {'first_set': 'break', 'follow_set': [], 'is_terminal': True},
+               'if': {'first_set': 'if', 'follow_set': [], 'is_terminal': True},
+               'repeat': {'first_set': 'repeat', 'follow_set': [], 'is_terminal': True},
+               'return': {'first_set': 'return', 'follow_set': [], 'is_terminal': True},
+               'ID': {'first_set': 'ID', 'follow_set': [], 'is_terminal': True},
+               'endif': {'first_set': 'endif', 'follow_set': [], 'is_terminal': True},
+               'NUM': {'first_set': 'NUM', 'follow_set': [], 'is_terminal': True},
+               '=': {'first_set': '=', 'follow_set': [], 'is_terminal': True},
+               '*': {'first_set': '*', 'follow_set': [], 'is_terminal': True},
+               '+': {'first_set': '+', 'follow_set': [], 'is_terminal': True},
+               '-': {'first_set': '-', 'follow_set': [], 'is_terminal': True},
+               '<': {'first_set': '<', 'follow_set': [], 'is_terminal': True},
+               '==': {'first_set': '==', 'follow_set': [], 'is_terminal': True},
+               ',': {'first_set': ',', 'follow_set': [], 'is_terminal': True}}
+
+    predicts = {
+        # state_num : ( [(edge_symbol1, target_state1), (edge_symbol2, target_state2)], is_final_state )
+        # epsilon is shown with ""
+        1: ([("Declaration-list", 2)], False),
+        2: ([("$", 3)], False),
+        3: ([], True),
+        4: ([("Declaration", 5), ("", 6)], False),
+        5: ([("Declaration-list", 6)], False),
+        6: ([], True),
+        7: ([("Declaration-initial", 8)], False),
+        8: ([("Declaration-prime", 9)], False),
+        9: ([], True),
+    }
 
     def __init__(self, filepath):
         self.input_filename = filepath
@@ -394,38 +473,16 @@ class Parser:
         self.look_ahead = self.scanner.next_token()
 
     def start(self):
-        root_node = Node("Program ", False)
+        root_node = Node("Program", False)
         self.parse(1, root_node)
 
     def write_parse_tree(self, root_node):
         pass
 
     def parse(self, state, node):
-        if state == 1:
-            if self.look_ahead not in self.first_sets["Declaration_list"]:
-                if self.panic_mode(1, node):
-                    node.add_child(Node("Declaration_list", False))
-                    self.parse(2, node)
-                else:
-                    self.parse(1, node)
-            else:
-                child_node = Node("Declaration_list", False)
-                node.add_child(child_node)
-                self.parse(4, child_node)
-
-            # self.panic_mode()
-            pass
-
-    #
-    #     codes for state 1 to 80
-    #
-
-    #
-    #     codes for state 81 to 158
-    #
+        pass
 
     def panic_mode(self, state, node):  # returns true if we should go to next state. else False
-
         pass
 
 
@@ -441,7 +498,7 @@ class Node:
 
 a = Scanner("../HW1/Practical/tests/tests/PA1_input_output_samples/T05/input.txt")
 # a = Compiler("input.txt")
-while True:
-    t = a.next_token()
-    if t == "$":
-        break
+# while True:
+#     t = a.next_token()
+#     if t == "$":
+#         break
