@@ -1,3 +1,4 @@
+from anytree import Node, RenderTree
 class Scanner:
     symbol_table = {"if": "KEYWORD",
                     "else": "KEYWORD",
@@ -628,7 +629,7 @@ class Parser:
         153: ([("Arg-list-prime", 154)], False),
         154: ([], True),
 
-        155: ([(",", 156),,("", 158)], False),
+        155: ([(",", 156),("", 158)], False),
         156: ([("Expression", 157)], False),
         157: ([("Arg-list-prime", 158)], False),
         158: ([], True),
@@ -647,7 +648,8 @@ class Parser:
         self.parse(1, root_node)
 
     def write_parse_tree(self, root_node):
-        pass
+        for pre, fill, node in RenderTree(root_node):
+            print("%s%s" % (pre, node.name))
 
     def parse(self, state, node):
         pass
@@ -656,14 +658,11 @@ class Parser:
         pass
 
 
-class Node:
-    def __init__(self, value, is_terminal):
-        self.value = value
+class Node_Parser:
+    def __init__(self, value, is_terminal,parent_parser):
+        self.value = Node(value,parent=parent_parser)
         self.is_terminal = is_terminal
-        self.children = []
 
-    def add_child(self, node):
-        self.children.append(node)
 
 
 # a = Scanner("../HW1/Practical/tests/tests/PA1_input_output_samples/T05/input.txt")
