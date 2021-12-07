@@ -532,7 +532,108 @@ class Parser:
         79: ([("B", 80)], False),
         80: ([], True),
 
+        81: ([("[", 82)], ("Expression", 83), ("Simple-expression-prime ", 85), False),
+        82: ([("Expression", 83)], False),
+        83: ([("]", 84)], False),
+        84: ([("H", 85)], False),
+        85: ([], True),
+
+        86: ([("G", 87), ("Expression", 89)], False),
+        87: ([("D", 88)], False),
+        88: ([("C", 89)], False),
+        89: ([], True),
+
+        90: ([("Additive-expression-zegond", 91)], False),
+        91: ([("C", 92)], False),
+        92: ([], True),
+
+        93: ([("Additive-expression-prime", 94)], False),
+        94: ([("C", 95)], False),
+        95: ([], True),
+
+        96: ([("Relop", 97),["",98]], False),
+        97: ([("Additive-expression", 98)], False),
+        98: ([], True),
+
+        99: ([("<", 100),("==", 100)], False),
+        100: ([], True),
+
+        101: ([("Term", 102)], False),
+        102: ([("D", 103)], False),
+        103: ([], True),
+
+        104: ([("Term-prime", 105)], False),
+        105: ([("D", 106)], False),
+        106: ([], True),
+
+        107: ([("Term-zegond", 108)], False),
+        108: ([("D", 109)], False),
+        109: ([], True),
+
+        110: ([("Addop", 111),("",113)], False),
+        111: ([("Term", 112)], False),
+        112: ([("D", 113)], False),
+        113: ([], True),
+
+        114: ([("+", 115),("-", 115)], False),
+        115: ([], True),
+
+        116: ([("Factor", 117)], False),
+        117: ([("G", 118)], False),
+        118: ([], True),
+
+        119: ([("Factor-prime", 120)], False),
+        120: ([("G", 121)], False),
+        121: ([], True),
+
+        122: ([("Factor-zegond", 123)], False),
+        123: ([("G", 124)], False),
+        124: ([], True),
+
+        125: ([("*", 126),("", 128)], False),
+        126: ([("Factor", 127)], False),
+        127: ([("G", 128)], False),
+        128: ([], True),
+
+        129: ([("(", 130),("NUM", 132),("ID", 133)], False),
+        130: ([("Expression", 131)], False),
+        131: ([(")", 132)], False),
+        132: ([], True),
+        133: ([("Var-call-prime", 132)], False),
+
+        134: ([("(", 135),("Var-prime", 137)], False),
+        135: ([("Args", 136)], False),
+        136: ([(")", 137)], False),
+        137: ([], True),
+
+        138: ([("[", 139),("", 141)], False),
+        139: ([("Expression", 140)], False),
+        140: ([("]", 141)], False),
+        141: ([], True),
+
+        142: ([("{", 143),("", 145)], False),
+        143: ([("Args", 144)], False),
+        144: ([("}", 145)], False),
+        145: ([], True),
+
+        146: ([("{", 147),("NUM", 149)], False),
+        147: ([("Expression", 148)], False),
+        148: ([("}", 149)], False),
+        149: ([], True),
+
+        150: ([("", 151),("Arg-list", 151)], False),
+        151: ([], True),
+
+        152: ([("Expression", 153)], False),
+        153: ([("Arg-list-prime", 154)], False),
+        154: ([], True),
+
+        155: ([(",", 156),,("", 158)], False),
+        156: ([("Expression", 157)], False),
+        157: ([("Arg-list-prime", 158)], False),
+        158: ([], True),
     }
+    
 
     def __init__(self, filepath):
         self.input_filename = filepath
