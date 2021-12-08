@@ -1,4 +1,26 @@
 from anytree import Node, RenderTree
+
+
+class MyNode:
+    def __init__(self, value, is_terminal):
+        self.is_terminal = is_terminal
+        self.children = []
+        if not isinstance(value, str):
+            self.value = ", ".join(value)
+            if not is_terminal:
+                self.symbol = value
+            elif value[0] in ["ID", "NUM"]:
+                self.symbol = value[0]
+            else:
+                self.symbol = value[1]
+        else:
+            self.value = value
+            self.symbol = value
+
+    def add_child(self, node):
+        self.children.append(node)
+
+
 class Scanner:
     symbol_table = {"if": "KEYWORD",
                     "else": "KEYWORD",
@@ -17,7 +39,7 @@ class Scanner:
 
     def __init__(self, filepath):
         # setting files
-        self.file = open(filepath, "r")
+        self.file = open(filepath + "input.txt", "r")
         self.symbol_file = open("symbol_table.txt", "w+")
         self.error_file = open("lexical_errors.txt", "w+")
         self.tokens_file = open("tokens.txt", "w+")
@@ -46,7 +68,7 @@ class Scanner:
                         if self.error_file.tell() == 0:
                             self.error_file.write("There is no lexical error.")
                         self.error_file.close()
-                        return "$"
+                        return "EOF", "$"
                     if self.last_char in self.whitespace:
                         if self.last_char == "\n":
                             self.new_line()
@@ -69,7 +91,7 @@ class Scanner:
                         return self.next_token()
                 elif state == 1:
                     return self.next_token()
-                    # return "whitespace", token
+                    # return "WHITESPACE", token
                 elif state == 2:
                     self.last_pos = self.file.tell()
                     self.last_char = self.file.read(1)
@@ -96,7 +118,7 @@ class Scanner:
                         # fill for error
                         if self.last_char in self.legal_characters:
                             if self.last_char != "":
-                                self.file.seek(self.last_pos)
+                                self.step_back()
                             self.write_error("({}, Invalid input)".format(token))
                         else:
                             self.write_error("({}, Invalid input)".format(token + self.last_char))
@@ -118,7 +140,7 @@ class Scanner:
                         return self.next_token()
                 elif state == 5:
                     if self.last_char != "":
-                        self.file.seek(self.last_pos)
+                        self.step_back()
                     self.write_token("(SYMBOL, =)")
                     return "SYMBOL", "="
                 elif state == 6:
@@ -129,7 +151,7 @@ class Scanner:
                     return "SYMBOL", token
                 elif state == 8:
                     if self.last_char != "":
-                        self.file.seek(self.last_pos)
+                        self.step_back()
                     self.write_token("(NUM, {})".format(token))
                     return "NUM", token
                 elif state == 9:
@@ -148,7 +170,7 @@ class Scanner:
                             error_string = token
                         self.write_error("({}, Unclosed comment)".format(error_string), True)
                         # self.new_line()
-                        return "$"
+                        return "EOF", "$"
                 elif state == 10:
                     self.last_pos = self.file.tell()
                     self.last_char = self.file.read(1)
@@ -183,24 +205,25 @@ class Scanner:
                     elif self.last_char == "":
                         self.write_error("({}, Unclosed comment)".format(token), True)
                         # self.new_line()
-                        return "$"
+                        return "EOF", "$"
                     elif self.last_char != "*":
                         state = 9
                 elif state == 13:
                     if self.last_char != "":
-                        self.file.seek(self.last_pos)
+                        self.step_back()
                     token_type = self.get_token(token)
                     self.write_token("({}, {})".format(token_type, token))
                     return token_type, token
                 elif state == 14:
                     if self.last_char != "":
-                        self.file.seek(self.last_pos)
-                    # last_char is \n
-                    # self.write_token("(COMMENT, {})".format(token))
-                    return "COMMENT", token
+                        self.step_back()
+                    # return "COMMENT", token
+                    return self.next_token()
+
                 elif state == 15:
-                    # self.write_token("(COMMENT, {})".format(token))
-                    return "COMMENT", token
+                    self.write_token("(COMMENT, {})".format(token))
+                    # return "COMMENT", token
+                    return self.next_token()
                 elif state == 16:
                     self.last_pos = self.file.tell()
                     self.last_char = self.file.read(1)
@@ -216,11 +239,11 @@ class Scanner:
                         return self.next_token()
                 elif state == 17:
                     if self.last_char != "":
-                        self.file.seek(self.last_pos)
+                        self.step_back()
                     self.write_token("(SYMBOL, *)")
                     return "SYMBOL", "*"
         else:
-            return "$"
+            return "EOF", "$"
 
     # manages new line in files and self.current_line for one \n
     def new_line(self):
@@ -280,394 +303,552 @@ class Scanner:
             self.symbol_file.write("{}.\t{}\n".format(symbol_num, symbol))
             symbol_num += 1
 
+    def step_back(self):
+        self.file.seek(self.last_pos)
+
 
 class Parser:
     # a dictionary with grammar symbols as it's keys. every key is mapped to another dictionary
     # containing first_set, follow_set, is_terminal attribute of that symbol
-    symbols = {'Program': {'first_set': ['$', 'int', 'void'], 'follow_set': [], 'is_terminal': False, 'start_state': 0},
-               'Declaration-list': {'first_set': ['int', 'void'],
-                                    'follow_set': ['$', '{', 'break', ';', 'if', 'repeat', 'return', 'ID', '(', 'NUM',
-                                                   '}'], 'is_terminal': False, 'start_state': 3},
-               'Declaration': {'first_set': ['int', 'void'],
-                               'follow_set': ['int', 'void', '$', '{', 'break', ';', 'if', 'repeat', 'return', 'ID',
-                                              '(', 'NUM', '}'], 'is_terminal': False, 'start_state': 6},
-               'Declaration-initial': {'first_set': ['int', 'void'], 'follow_set': ['(', ';', '[', ',', ')'],
-                                       'is_terminal': False, 'start_state': 9},
-               'Declaration-prime': {'first_set': ['(', ';', '['],
-                                     'follow_set': ['int', 'void', '$', '{', 'break', ';', 'if', 'repeat', 'return',
-                                                    'ID', '(', 'NUM', '}'], 'is_terminal': False, 'start_state': 12},
-               'Var-declaration-prime': {'first_set': [';', '['],
-                                         'follow_set': ['int', 'void', '$', '{', 'break', ';', 'if', 'repeat', 'return',
-                                                        'ID', '(', 'NUM', '}'], 'is_terminal': False,
-                                         'start_state': 14}, 'Fun-declaration-prime': {'first_set': ['('],
-                                                                                       'follow_set': ['int', 'void',
-                                                                                                      '$', '{', 'break',
-                                                                                                      ';', 'if',
-                                                                                                      'repeat',
-                                                                                                      'return', 'ID',
-                                                                                                      '(', 'NUM', '}'],
-                                                                                       'is_terminal': False,
-                                                                                       'start_state': 19},
-               'Type-specifier': {'first_set': ['int', 'void'], 'follow_set': ['ID'], 'is_terminal': False,
-                                  'start_state': 24},
-               'Params': {'first_set': ['int', 'void'], 'follow_set': [')'], 'is_terminal': False, 'start_state': 26},
-               'Param-list': {'first_set': [','], 'follow_set': [')'], 'is_terminal': False, 'start_state': 31},
-               'Param': {'first_set': ['int', 'void'], 'follow_set': [',', ')'], 'is_terminal': False,
-                         'start_state': 35},
-               'Param-prime': {'first_set': ['['], 'follow_set': [',', ')'], 'is_terminal': False, 'start_state': 38},
-               'Compound-stmt': {'first_set': ['{'],
-                                 'follow_set': ['int', 'void', '$', '{', 'break', ';', 'if', 'repeat', 'return', 'ID',
-                                                '(', 'NUM', '}', 'endif', 'else', 'until'], 'is_terminal': False,
-                                 'start_state': 41},
-               'Statement-list': {'first_set': ['{', 'break', ';', 'if', 'repeat', 'return', 'ID', '(', 'NUM'],
-                                  'follow_set': ['}'], 'is_terminal': False, 'start_state': 46},
-               'Statement': {'first_set': ['{', 'break', ';', 'if', 'repeat', 'return', 'ID', '(', 'NUM'],
-                             'follow_set': ['{', 'break', ';', 'if', 'repeat', 'return', 'ID', '(', 'NUM', '}', 'endif',
-                                            'else', 'until'], 'is_terminal': False, 'start_state': 49},
-               'Expression-stmt': {'first_set': ['break', ';', 'ID', '(', 'NUM'],
-                                   'follow_set': ['{', 'break', ';', 'if', 'repeat', 'return', 'ID', '(', 'NUM', '}',
-                                                  'endif', 'else', 'until'], 'is_terminal': False, 'start_state': 51},
-               'Selection-stmt': {'first_set': ['if'],
-                                  'follow_set': ['{', 'break', ';', 'if', 'repeat', 'return', 'ID', '(', 'NUM', '}',
-                                                 'endif', 'else', 'until'], 'is_terminal': False, 'start_state': 54},
-               'Else-stmt': {'first_set': ['endif', 'else'],
-                             'follow_set': ['{', 'break', ';', 'if', 'repeat', 'return', 'ID', '(', 'NUM', '}', 'endif',
-                                            'else', 'until'], 'is_terminal': False, 'start_state': 61},
-               'Iteration-stmt': {'first_set': ['repeat'],
-                                  'follow_set': ['{', 'break', ';', 'if', 'repeat', 'return', 'ID', '(', 'NUM', '}',
-                                                 'endif', 'else', 'until'], 'is_terminal': False, 'start_state': 65},
-               'Return-stmt': {'first_set': ['return'],
-                               'follow_set': ['{', 'break', ';', 'if', 'repeat', 'return', 'ID', '(', 'NUM', '}',
-                                              'endif', 'else', 'until'], 'is_terminal': False, 'start_state': 72},
-               'Return-stmt-prime': {'first_set': [';', 'ID', '(', 'NUM'],
-                                     'follow_set': ['{', 'break', ';', 'if', 'repeat', 'return', 'ID', '(', 'NUM', '}',
-                                                    'endif', 'else', 'until'], 'is_terminal': False, 'start_state': 75},
-               'Expression': {'first_set': ['ID', '(', 'NUM'], 'follow_set': [';', ')', '|', ']', ','],
-                              'is_terminal': False, 'start_state': 78},
-               'B': {'first_set': ['=', '(', '[', '*', '+', '-', '<', '=='], 'follow_set': [';', ')', '|', ']', ','],
-                     'is_terminal': False, 'start_state': 81},
-               'H': {'first_set': ['=', '*', '+', '-', '<', '=='], 'follow_set': [';', ')', '|', ']', ','],
-                     'is_terminal': False, 'start_state': 86},
-               'Simple-expression-zegond': {'first_set': ['(', 'NUM'], 'follow_set': [';', ')', '|', ']', ','],
-                                            'is_terminal': False, 'start_state': 90},
-               'Simple-expression-prime': {'first_set': ['(', '*', '+', '-', '<', '=='],
-                                           'follow_set': [';', ')', '|', ']', ','], 'is_terminal': False,
-                                           'start_state': 93},
-               'C': {'first_set': ['<', '=='], 'follow_set': [';', ')', '|', ']', ','], 'is_terminal': False,
-                     'start_state': 96},
-               'Relop': {'first_set': ['<', '=='], 'follow_set': ['(', 'ID', 'NUM'], 'is_terminal': False,
-                         'start_state': 99},
-               'Additive-expression': {'first_set': ['(', 'ID', 'NUM'], 'follow_set': [';', ')', '|', ']', ','],
-                                       'is_terminal': False, 'start_state': 101},
-               'Additive-expression-prime': {'first_set': ['(', '*', '+', '-'],
-                                             'follow_set': ['<', '==', ';', ')', '|', ']', ','], 'is_terminal': False,
-                                             'start_state': 104},
-               'Additive-expression-zegond': {'first_set': ['(', 'NUM'],
-                                              'follow_set': ['<', '==', ';', ')', '|', ']', ','], 'is_terminal': False,
-                                              'start_state': 107},
-               'D': {'first_set': ['+', '-'], 'follow_set': ['<', '==', ';', ')', '|', ']', ','], 'is_terminal': False,
-                     'start_state': 110},
-               'Addop': {'first_set': ['+', '-'], 'follow_set': ['(', 'ID', 'NUM'], 'is_terminal': False,
-                         'start_state': 114},
-               'Term': {'first_set': ['(', 'ID', 'NUM'], 'follow_set': ['+', '-', ';', ')', '<', '==', '|', ']', ','],
-                        'is_terminal': False, 'start_state': 116},
-               'Term-prime': {'first_set': ['(', '*'], 'follow_set': ['+', '-', ';', ')', '<', '==', '|', ']', ','],
-                              'is_terminal': False, 'start_state': 119},
-               'Term-zegond': {'first_set': ['(', 'NUM'], 'follow_set': ['+', '-', ';', ')', '<', '==', '|', ']', ','],
-                               'is_terminal': False, 'start_state': 122},
-               'G': {'first_set': ['*'], 'follow_set': ['+', '-', ';', ')', '<', '==', '|', ']', ','],
-                     'is_terminal': False, 'start_state': 125}, 'Factor': {'first_set': ['(', 'ID', 'NUM'],
-                                                                           'follow_set': ['*', '+', '-', ';', ')', '<',
-                                                                                          '==', '|', ']', ','],
-                                                                           'is_terminal': False, 'start_state': 129},
-               'Var-call-prime': {'first_set': ['(', '['],
-                                  'follow_set': ['*', '+', '-', ';', ')', '<', '==', '|', ']', ','],
-                                  'is_terminal': False, 'start_state': 134},
-               'Var-prime': {'first_set': ['['], 'follow_set': ['*', '+', '-', ';', ')', '<', '==', '|', ']', ','],
-                             'is_terminal': False, 'start_state': 138},
-               'Factor-prime': {'first_set': ['('], 'follow_set': ['*', '+', '-', ';', ')', '<', '==', '|', ']', ','],
-                                'is_terminal': False, 'start_state': 142}, 'Factor-zegond': {'first_set': ['(', 'NUM'],
-                                                                                             'follow_set': ['*', '+',
-                                                                                                            '-', ';',
-                                                                                                            ')', '<',
-                                                                                                            '==', '|',
-                                                                                                            ']', ','],
-                                                                                             'is_terminal': False,
-                                                                                             'start_state': 146},
-               'Args': {'first_set': ['ID', '(', 'NUM'], 'follow_set': [')'], 'is_terminal': False, 'start_state': 150},
-               'Arg-list': {'first_set': ['ID', '(', 'NUM'], 'follow_set': [')'], 'is_terminal': False,
-                            'start_state': 152},
-               'Arg-list-prime': {'first_set': [','], 'follow_set': [')'], 'is_terminal': False, 'start_state': 155},
-               # terminals from here on
-               '$': {'first_set': '$', 'follow_set': [], 'is_terminal': True},
-               'int': {'first_set': 'int', 'follow_set': [], 'is_terminal': True},
-               'void': {'first_set': 'void', 'follow_set': [], 'is_terminal': True},
-               '(': {'first_set': '(', 'follow_set': [], 'is_terminal': True},
-               ')': {'first_set': ')', 'follow_set': [], 'is_terminal': True},
-               '[': {'first_set': '[', 'follow_set': [], 'is_terminal': True},
-               ']': {'first_set': ']', 'follow_set': [], 'is_terminal': True},
-               ';': {'first_set': ';', 'follow_set': [], 'is_terminal': True},
-               '{': {'first_set': '{', 'follow_set': [], 'is_terminal': True},
-               '}': {'first_set': '}', 'follow_set': [], 'is_terminal': True},
-               'break': {'first_set': 'break', 'follow_set': [], 'is_terminal': True},
-               'if': {'first_set': 'if', 'follow_set': [], 'is_terminal': True},
-               'repeat': {'first_set': 'repeat', 'follow_set': [], 'is_terminal': True},
-               'return': {'first_set': 'return', 'follow_set': [], 'is_terminal': True},
-               'ID': {'first_set': 'ID', 'follow_set': [], 'is_terminal': True},
-               'endif': {'first_set': 'endif', 'follow_set': [], 'is_terminal': True},
-               'NUM': {'first_set': 'NUM', 'follow_set': [], 'is_terminal': True},
-               '=': {'first_set': '=', 'follow_set': [], 'is_terminal': True},
-               '*': {'first_set': '*', 'follow_set': [], 'is_terminal': True},
-               '+': {'first_set': '+', 'follow_set': [], 'is_terminal': True},
-               '-': {'first_set': '-', 'follow_set': [], 'is_terminal': True},
-               '<': {'first_set': '<', 'follow_set': [], 'is_terminal': True},
-               '==': {'first_set': '==', 'follow_set': [], 'is_terminal': True},
-               ',': {'first_set': ',', 'follow_set': [], 'is_terminal': True}}
+    symbols = {
+        'Program': {'first_set': ['$', 'int', 'void'], 'follow_set': [], 'is_terminal': False, 'start_state': 0,
+                    'predict_set': ['$', 'int', 'void']},
+        'Declaration-list': {'first_set': ['int', 'void', ''], 'follow_set': ['$', '{', 'break', ';', 'if',
+                                                                              'repeat', 'return', 'ID', '(',
+                                                                              'NUM', '}'], 'is_terminal': False,
+                             'start_state': 3, 'predict_set': ['int', 'void', '', '$', '{', 'break',
+                                                               ';', 'if', 'repeat', 'return', 'ID', '(', 'NUM',
+                                                               '}']},
+        'Declaration': {'first_set': ['int', 'void'],
+                        'follow_set': ['int', 'void', '$', '{', 'break', ';', 'if', 'repeat', 'return', 'ID',
+                                       '(', 'NUM', '}'], 'is_terminal': False, 'start_state': 6,
+                        'predict_set': ['int', 'void']},
+        'Declaration-initial': {'first_set': ['int', 'void'], 'follow_set': ['(', ';', '[', ',', ')'],
+                                'is_terminal': False, 'start_state': 9, 'predict_set': ['int', 'void']},
+        'Declaration-prime': {'first_set': ['(', ';', '['],
+                              'follow_set': ['int', 'void', '$', '{', 'break', ';', 'if', 'repeat', 'return',
+                                             'ID', '(', 'NUM', '}'], 'is_terminal': False, 'start_state': 12,
+                              'predict_set': ['(', ';', '[']}, 'Var-declaration-prime': {'first_set': [';', '['],
+                                                                                         'follow_set': ['int',
+                                                                                                        'void',
+                                                                                                        '$', '{',
+                                                                                                        'break',
+                                                                                                        ';',
+                                                                                                        'if',
+                                                                                                        'repeat',
+                                                                                                        'return',
+                                                                                                        'ID',
+                                                                                                        '(',
+                                                                                                        'NUM',
+                                                                                                        '}'],
+                                                                                         'is_terminal': False,
+                                                                                         'start_state': 14,
+                                                                                         'predict_set': [';',
+                                                                                                         '[']},
+        'Fun-declaration-prime': {'first_set': ['('],
+                                  'follow_set': ['int', 'void', '$', '{', 'break', ';', 'if', 'repeat', 'return',
+                                                 'ID', '(', 'NUM', '}'], 'is_terminal': False, 'start_state': 19,
+                                  'predict_set': ['(']},
+        'Type-specifier': {'first_set': ['int', 'void'], 'follow_set': ['ID'], 'is_terminal': False,
+                           'start_state': 24, 'predict_set': ['int', 'void']},
+        'Params': {'first_set': ['int', 'void'], 'follow_set': [')'], 'is_terminal': False, 'start_state': 26,
+                   'predict_set': ['int', 'void']},
+        'Param-list': {'first_set': [',', ''], 'follow_set': [')'], 'is_terminal': False, 'start_state': 31,
+                       'predict_set': [',', '', ')']},
+        'Param': {'first_set': ['int', 'void'], 'follow_set': [',', ')'], 'is_terminal': False,
+                  'start_state': 35, 'predict_set': ['int', 'void']},
+        'Param-prime': {'first_set': ['[', ''], 'follow_set': [',', ')'], 'is_terminal': False,
+                        'start_state': 38, 'predict_set': ['[', '', ',', ')']},
+        'Compound-stmt': {'first_set': ['{'],
+                          'follow_set': ['int', 'void', '$', '{', 'break', ';', 'if', 'repeat', 'return', 'ID',
+                                         '(', 'NUM', '}', 'endif', 'else', 'until'], 'is_terminal': False,
+                          'start_state': 41, 'predict_set': ['{']},
+        'Statement-list': {'first_set': ['{', 'break', ';', 'if', 'repeat', 'return', 'ID', '(', 'NUM', ''],
+                           'follow_set': ['}'], 'is_terminal': False, 'start_state': 46,
+                           'predict_set': ['{', 'break', ';', 'if', 'repeat', 'return', 'ID', '(', 'NUM', '',
+                                           '}']},
+        'Statement': {'first_set': ['{', 'break', ';', 'if', 'repeat', 'return', 'ID', '(', 'NUM'],
+                      'follow_set': ['{', 'break', ';', 'if', 'repeat', 'return', 'ID', '(', 'NUM', '}', 'endif',
+                                     'else', 'until'], 'is_terminal': False, 'start_state': 49,
+                      'predict_set': ['{', 'break', ';', 'if', 'repeat', 'return', 'ID', '(', 'NUM']},
+        'Expression-stmt': {'first_set': ['break', ';', 'ID', '(', 'NUM'],
+                            'follow_set': ['{', 'break', ';', 'if', 'repeat', 'return', 'ID', '(', 'NUM', '}',
+                                           'endif', 'else', 'until'], 'is_terminal': False, 'start_state': 51,
+                            'predict_set': ['break', ';', 'ID', '(', 'NUM']},
+        'Selection-stmt': {'first_set': ['if'],
+                           'follow_set': ['{', 'break', ';', 'if', 'repeat', 'return', 'ID', '(', 'NUM', '}',
+                                          'endif', 'else', 'until'], 'is_terminal': False, 'start_state': 54,
+                           'predict_set': ['if']}, 'Else-stmt': {'first_set': ['endif', 'else'],
+                                                                 'follow_set': ['{', 'break', ';', 'if',
+                                                                                'repeat', 'return', 'ID', '(',
+                                                                                'NUM', '}', 'endif', 'else',
+                                                                                'until'], 'is_terminal': False,
+                                                                 'start_state': 61,
+                                                                 'predict_set': ['endif', 'else']},
+        'Iteration-stmt': {'first_set': ['repeat'],
+                           'follow_set': ['{', 'break', ';', 'if', 'repeat', 'return', 'ID', '(', 'NUM', '}',
+                                          'endif', 'else', 'until'], 'is_terminal': False, 'start_state': 65,
+                           'predict_set': ['repeat']}, 'Return-stmt': {'first_set': ['return'],
+                                                                       'follow_set': ['{', 'break', ';', 'if',
+                                                                                      'repeat', 'return', 'ID',
+                                                                                      '(', 'NUM', '}', 'endif',
+                                                                                      'else', 'until'],
+                                                                       'is_terminal': False, 'start_state': 72,
+                                                                       'predict_set': ['return']},
+        'Return-stmt-prime': {'first_set': [';', 'ID', '(', 'NUM'],
+                              'follow_set': ['{', 'break', ';', 'if', 'repeat', 'return', 'ID', '(', 'NUM', '}',
+                                             'endif', 'else', 'until'], 'is_terminal': False, 'start_state': 75,
+                              'predict_set': [';', 'ID', '(', 'NUM']},
+        'Expression': {'first_set': ['ID', '(', 'NUM'], 'follow_set': [';', ')', ']', ','], 'is_terminal': False,
+                       'start_state': 78, 'predict_set': ['ID', '(', 'NUM']},
+        'B': {'first_set': ['=', '(', '[', '*', '+', '-', '<', '==', ''], 'follow_set': [';', ')', ']', ','],
+              'is_terminal': False, 'start_state': 81,
+              'predict_set': ['=', '(', '[', '*', '+', '-', '<', '==', '', ';', ')', ']', ',']},
+        'H': {'first_set': ['=', '*', '+', '-', '<', '==', ''], 'follow_set': [';', ')', ']', ','],
+              'is_terminal': False, 'start_state': 86,
+              'predict_set': ['=', '*', '+', '-', '<', '==', '', ';', ')', ']', ',']},
+        'Simple-expression-zegond': {'first_set': ['(', 'NUM'], 'follow_set': [';', ')', ']', ','],
+                                     'is_terminal': False, 'start_state': 90, 'predict_set': ['(', 'NUM']},
+        'Simple-expression-prime': {'first_set': ['(', '*', '+', '-', '<', '==', ''],
+                                    'follow_set': [';', ')', ']', ','], 'is_terminal': False, 'start_state': 93,
+                                    'predict_set': ['(', '*', '+', '-', '<', '==', '', ';', ')', ']', ',']},
+        'C': {'first_set': ['<', '==', ''], 'follow_set': [';', ')', ']', ','], 'is_terminal': False,
+              'start_state': 96, 'predict_set': ['<', '==', '', ';', ')', ']', ',']},
+        'Relop': {'first_set': ['<', '=='], 'follow_set': ['(', 'ID', 'NUM'], 'is_terminal': False,
+                  'start_state': 99, 'predict_set': ['<', '==']},
+        'Additive-expression': {'first_set': ['(', 'ID', 'NUM'], 'follow_set': [';', ')', ']', ','],
+                                'is_terminal': False, 'start_state': 101, 'predict_set': ['(', 'ID', 'NUM']},
+        'Additive-expression-prime': {'first_set': ['(', '*', '+', '-', ''],
+                                      'follow_set': ['<', '==', ';', ')', ']', ','], 'is_terminal': False,
+                                      'start_state': 104,
+                                      'predict_set': ['(', '*', '+', '-', '', '<', '==', ';', ')', ']', ',']},
+        'Additive-expression-zegond': {'first_set': ['(', 'NUM'], 'follow_set': ['<', '==', ';', ')', ']', ','],
+                                       'is_terminal': False, 'start_state': 107, 'predict_set': ['(', 'NUM']},
+        'D': {'first_set': ['+', '-', ''], 'follow_set': ['<', '==', ';', ')', ']', ','], 'is_terminal': False,
+              'start_state': 110, 'predict_set': ['+', '-', '', '<', '==', ';', ')', ']', ',']},
+        'Addop': {'first_set': ['+', '-'], 'follow_set': ['(', 'ID', 'NUM'], 'is_terminal': False,
+                  'start_state': 114, 'predict_set': ['+', '-']},
+        'Term': {'first_set': ['(', 'ID', 'NUM'], 'follow_set': ['+', '-', ';', ')', '<', '==', ']', ','],
+                 'is_terminal': False, 'start_state': 116, 'predict_set': ['(', 'ID', 'NUM']},
+        'Term-prime': {'first_set': ['(', '*', ''], 'follow_set': ['+', '-', ';', ')', '<', '==', ']', ','],
+                       'is_terminal': False, 'start_state': 119,
+                       'predict_set': ['(', '*', '', '+', '-', ';', ')', '<', '==', ']', ',']},
+        'Term-zegond': {'first_set': ['(', 'NUM'], 'follow_set': ['+', '-', ';', ')', '<', '==', ']', ','],
+                        'is_terminal': False, 'start_state': 122, 'predict_set': ['(', 'NUM']},
+        'G': {'first_set': ['*', ''], 'follow_set': ['+', '-', ';', ')', '<', '==', ']', ','],
+              'is_terminal': False, 'start_state': 125,
+              'predict_set': ['*', '', '+', '-', ';', ')', '<', '==', ']', ',']},
+        'Factor': {'first_set': ['(', 'ID', 'NUM'], 'follow_set': ['*', '+', '-', ';', ')', '<', '==', ']', ','],
+                   'is_terminal': False, 'start_state': 129, 'predict_set': ['(', 'ID', 'NUM']},
+        'Var-call-prime': {'first_set': ['(', '[', ''],
+                           'follow_set': ['*', '+', '-', ';', ')', '<', '==', ']', ','], 'is_terminal': False,
+                           'start_state': 134,
+                           'predict_set': ['(', '[', '', '*', '+', '-', ';', ')', '<', '==', ']', ',']},
+        'Var-prime': {'first_set': ['[', ''], 'follow_set': ['*', '+', '-', ';', ')', '<', '==', ']', ','],
+                      'is_terminal': False, 'start_state': 138,
+                      'predict_set': ['[', '', '*', '+', '-', ';', ')', '<', '==', ']', ',']},
+        'Factor-prime': {'first_set': ['(', ''], 'follow_set': ['*', '+', '-', ';', ')', '<', '==', ']', ','],
+                         'is_terminal': False, 'start_state': 142,
+                         'predict_set': ['(', '', '*', '+', '-', ';', ')', '<', '==', ']', ',']},
+        'Factor-zegond': {'first_set': ['(', 'NUM'],
+                          'follow_set': ['*', '+', '-', ';', ')', '<', '==', ']', ','], 'is_terminal': False,
+                          'start_state': 146, 'predict_set': ['(', 'NUM']},
+        'Args': {'first_set': ['ID', '(', 'NUM', ''], 'follow_set': [')'], 'is_terminal': False,
+                 'start_state': 150, 'predict_set': ['ID', '(', 'NUM', '', ')']},
+        'Arg-list': {'first_set': ['ID', '(', 'NUM'], 'follow_set': [')'], 'is_terminal': False,
+                     'start_state': 152, 'predict_set': ['ID', '(', 'NUM']},
+        'Arg-list-prime': {'first_set': [',', ''], 'follow_set': [')'], 'is_terminal': False, 'start_state': 155,
+                           'predict_set': [',', '', ')']},
+        '$': {'first_set': ['$'], 'follow_set': [], 'is_terminal': True, 'predict_set': ['$']},
+        'int': {'first_set': ['int'], 'follow_set': [], 'is_terminal': True, 'predict_set': ['int']},
+        'void': {'first_set': ['void'], 'follow_set': [], 'is_terminal': True, 'predict_set': ['void']},
+        '(': {'first_set': ['('], 'follow_set': [], 'is_terminal': True, 'predict_set': ['(']},
+        ')': {'first_set': [')'], 'follow_set': [], 'is_terminal': True, 'predict_set': [')']},
+        '[': {'first_set': ['['], 'follow_set': [], 'is_terminal': True, 'predict_set': ['[']},
+        ']': {'first_set': [']'], 'follow_set': [], 'is_terminal': True, 'predict_set': [']']},
+        ';': {'first_set': [';'], 'follow_set': [], 'is_terminal': True, 'predict_set': [';']},
+        '{': {'first_set': ['{'], 'follow_set': [], 'is_terminal': True, 'predict_set': ['{']},
+        '}': {'first_set': ['}'], 'follow_set': [], 'is_terminal': True, 'predict_set': ['}']},
+        'break': {'first_set': ['break'], 'follow_set': [], 'is_terminal': True, 'predict_set': ['break']},
+        'if': {'first_set': ['if'], 'follow_set': [], 'is_terminal': True, 'predict_set': ['if']},
+        'else': {'first_set': ['else'], 'follow_set': [], 'is_terminal': True, 'predict_set': ['else']},
+        'repeat': {'first_set': ['repeat'], 'follow_set': [], 'is_terminal': True, 'predict_set': ['repeat']},
+        'return': {'first_set': ['return'], 'follow_set': [], 'is_terminal': True, 'predict_set': ['return']},
+        'until': {'first_set': ['until'], 'follow_set': [], 'is_terminal': True, 'predict_set': ['until']},
+        'ID': {'first_set': ['ID'], 'follow_set': [], 'is_terminal': True, 'predict_set': ['ID']},
+        'endif': {'first_set': ['endif'], 'follow_set': [], 'is_terminal': True, 'predict_set': ['endif']},
+        'NUM': {'first_set': ['NUM'], 'follow_set': [], 'is_terminal': True, 'predict_set': ['NUM']},
+        '=': {'first_set': ['='], 'follow_set': [], 'is_terminal': True, 'predict_set': ['=']},
+        '*': {'first_set': ['*'], 'follow_set': [], 'is_terminal': True, 'predict_set': ['*']},
+        '+': {'first_set': ['+'], 'follow_set': [], 'is_terminal': True, 'predict_set': ['+']},
+        '-': {'first_set': ['-'], 'follow_set': [], 'is_terminal': True, 'predict_set': ['-']},
+        '<': {'first_set': ['<'], 'follow_set': [], 'is_terminal': True, 'predict_set': ['<']},
+        '==': {'first_set': ['=='], 'follow_set': [], 'is_terminal': True, 'predict_set': ['==']},
+        ',': {'first_set': [','], 'follow_set': [], 'is_terminal': True, 'predict_set': [',']}}
 
     edges = {
-        # state_num : ( [(edge_symbol1, target_state1), (edge_symbol2, target_state2)], is_final_state )
-        # epsilon is shown with ""
-        0: ([("Declaration-list", 2)], False),
-        1: ([("$", 3)], False),
-        2: ([], True),
+        0: ([('Declaration-list', 1)], True, False),
+        1: ([('$', 2)], False, False),
+        2: ([], False, True),
 
-        3: ([("Declaration", 5), ("", 6)], False),
-        4: ([("Declaration-list", 6)], False),
-        5: ([], True),
+        3: ([('Declaration', 4), ('', 5)], True, False),
+        4: ([('Declaration-list', 5)], False, False),
+        5: ([], False, True),
 
-        6: ([("Declaration-initial", 8)], False),
-        7: ([("Declaration-prime", 9)], False),
-        8: ([], True),
+        6: ([('Declaration-initial', 7)], True, False),
+        7: ([('Declaration-prime', 8)], False, False),
+        8: ([], False, True),
 
-        9: ([("Type-specifier", 11)], False),
-        10: ([("ID", 12)], False),
-        11: ([], True),
+        9: ([('Type-specifier', 10)], True, False),
+        10: ([('ID', 11)], False, False),
+        11: ([], False, True),
 
-        12: ([("Fun-declaration-prime", 14), ("Var-declaration-prime", 14)], False),
-        13: ([], True),
+        12: ([('Fun-declaration-prime', 13), ('Var-declaration-prime', 13)], True, False),
+        13: ([], False, True),
 
-        14: ([("[", 16), (";", 19)], False),
-        15: ([("NUM", 17)], False),
-        16: ([("]", 18)], False),
-        17: ([(";", 19)], False),
-        18: ([], True),
+        14: ([('[', 15), (';', 18)], True, False),
+        15: ([('NUM', 16)], False, False),
+        16: ([(']', 17)], False, False),
+        17: ([(';', 18)], False, False),
+        18: ([], False, True),
 
-        19: ([("(", 21)], False),
-        20: ([("Params", 22)], False),
-        21: ([(")", 23)], False),
-        22: ([("Compound-stmt", 24)], False),
-        23: ([], True),
+        19: ([('(', 20)], True, False),
+        20: ([('Params', 21)], False, False),
+        21: ([(')', 22)], False, False),
+        22: ([('Compound-stmt', 23)], False, False),
+        23: ([], False, True),
 
-        24: ([("int", 26), ("void", 26)], False),
-        25: ([], True),
+        24: ([('int', 25), ('void', 25)], True, False),
+        25: ([], False, True),
 
-        26: ([("int", 28), ("void", 31)], False),
-        27: ([("ID", 29)], False),
-        28: ([("Param-prime", 30)], False),
-        29: ([("Param-list", 31)], False),
-        30: ([], True),
+        26: ([('int', 27), ('void', 30)], True, False),
+        27: ([('ID', 28)], False, False),
+        28: ([('Param-prime', 29)], False, False),
+        29: ([('Param-list', 30)], False, False),
+        30: ([], False, True),
 
-        31: ([(",", 33), ("", 35)], False),
-        32: ([("Param", 34)], False),
-        33: ([("Param_list", 35)], False),
-        34: ([], True),
+        31: ([(',', 32), ('', 34)], True, False),
+        32: ([('Param', 33)], False, False),
+        33: ([('Param-list', 34)], False, False),
+        34: ([], False, True),
 
-        35: ([("Declaration-initial", 37)], False),
-        36: ([("Param-prime", 38)], False),
-        37: ([], True),
+        35: ([('Declaration-initial', 36)], True, False),
+        36: ([('Param-prime', 37)], False, False),
+        37: ([], False, True),
 
-        38: ([("[", 40), ("", 41)], False),
-        39: ([("]", 41)], False),
-        40: ([], True),
+        38: ([('[', 39), ('', 40)], True, False),
+        39: ([(']', 40)], False, False),
+        40: ([], False, True),
 
-        41: ([("{", 42)], False),
-        42: ([("Declaration-list", 43)], False),
-        43: ([("Statement-list", 44)], False),
-        44: ([("}", 45)], False),
-        45: ([], True),
+        41: ([('{', 42)], True, False),
+        42: ([('Declaration-list', 43)], False, False),
+        43: ([('Statement-list', 44)], False, False),
+        44: ([('}', 45)], False, False),
+        45: ([], False, True),
 
-        46: ([("Statement", 47), ("", 48)], False),
-        47: ([("Statement-list", 48)], False),
-        48: ([], True),
+        46: ([('Statement', 47), ('', 48)], True, False),
+        47: ([('Statement-list', 48)], False, False),
+        48: ([], False, True),
 
-        49: ([("Expression-stmt", 50), ("Compound-stmt", 50),
-              ("Selection-stmt", 50), ("Iteration-stmt", 50)],
-             False),
-        50: ([], True),
+        49: ([('Expression-stmt', 50), ('Compound-stmt', 50), ('Selection-stmt', 50),
+              ('Iteration-stmt', 50), ('Return-stmt', 50)],
+             True, False),
+        50: ([], False, True),
 
-        51: ([("Expression", 52), ("break", 52),
-              (";", 53)], False),
-        52: ([(";", 53)], False),
-        53: ([], True),
+        51: ([('Expression', 52), ('break', 52), (';', 53)], True, False),
+        52: ([(';', 53)], False, False),
+        53: ([], False, True),
 
-        54: ([("if", 55)], False),
-        55: ([("(", 56)], False),
-        56: ([("Expression", 57)], False),
-        57: ([(")", 58)], False),
-        58: ([("Statement", 59)], False),
-        59: ([("Else-stmt", 60)], False),
-        60: ([], True),
+        54: ([('if', 55)], True, False),
+        55: ([('(', 56)], False, False),
+        56: ([('Expression', 57)], False, False),
+        57: ([(')', 58)], False, False),
+        58: ([('Statement', 59)], False, False),
+        59: ([('Else-stmt', 60)], False, False),
+        60: ([], False, True),
 
-        61: ([("else", 62), ("endif", 64)], False),
-        62: ([("Statement", 63)], False),
-        63: ([("endif", 64)], False),
-        64: ([], True),
+        61: ([('else', 62), ('endif', 64)], True, False),
+        62: ([('Statement', 63)], False, False),
+        63: ([('endif', 64)], False, False),
+        64: ([], False, True),
 
-        65: ([("repeat", 66)], False),
-        66: ([("Statement", 67)], False),
-        67: ([("until", 68)], False),
-        68: ([("(", 69)], False),
-        69: ([("Expression", 70)], False),
-        70: ([(")", 71)], False),
-        71: ([], True),
+        65: ([('repeat', 66)], True, False),
+        66: ([('Statement', 67)], False, False),
+        67: ([('until', 68)], False, False),
+        68: ([('(', 69)], False, False),
+        69: ([('Expression', 70)], False, False),
+        70: ([(')', 71)], False, False),
+        71: ([], False, True),
 
-        72: ([("return", 73)], False),
-        73: ([("Return-stmt-prime", 74)], False),
-        74: ([], True),
+        72: ([('return', 73)], True, False),
+        73: ([('Return-stmt-prime', 74)], False, False),
+        74: ([], False, True),
 
-        75: ([("Expression", 76), (";", 77)], False),
-        76: ([(";", 77)], False),
-        77: ([], True),
+        75: ([('Expression', 76), (';', 77)], True, False),
+        76: ([(';', 77)], False, False),
+        77: ([], False, True),
 
-        78: ([("ID", 79), ("Simple_expression_zegond ", 80)], False),
-        79: ([("B", 80)], False),
-        80: ([], True),
+        78: ([('ID', 79), ('Simple-expression-zegond', 80)], True, False),
+        79: ([('B', 80)], False, False),
+        80: ([], False, True),
 
-        81: ([("[", 82)], ("Expression", 83), ("Simple-expression-prime ", 85), False),
-        82: ([("Expression", 83)], False),
-        83: ([("]", 84)], False),
-        84: ([("H", 85)], False),
-        85: ([], True),
+        81: ([('[', 82), ('Simple-expression-prime', 85), ('=', 159)], True, False),
+        82: ([('Expression', 83)], False, False),
+        83: ([(']', 84)], False, False),
+        84: ([('H', 85)], False, False),
+        159: ([('Expression', 85)], False, False),
+        85: ([], False, True),
 
-        86: ([("G", 87), ("Expression", 89)], False),
-        87: ([("D", 88)], False),
-        88: ([("C", 89)], False),
-        89: ([], True),
+        86: ([('G', 87), ('=', 160)], True, False),
+        87: ([('D', 88)], False, False),
+        88: ([('C', 89)], False, False),
+        160: ([('Expression', 89)], False, False),
+        89: ([], False, True),
 
-        90: ([("Additive-expression-zegond", 91)], False),
-        91: ([("C", 92)], False),
-        92: ([], True),
+        90: ([('Additive-expression-zegond', 91)], True, False),
+        91: ([('C', 92)], False, False),
+        92: ([], False, True),
 
-        93: ([("Additive-expression-prime", 94)], False),
-        94: ([("C", 95)], False),
-        95: ([], True),
+        93: ([('Additive-expression-prime', 94)], True, False),
+        94: ([('C', 95)], False, False),
+        95: ([], False, True),
 
-        96: ([("Relop", 97),["",98]], False),
-        97: ([("Additive-expression", 98)], False),
-        98: ([], True),
+        96: ([('Relop', 97), ['', 98]], True, False),
+        97: ([('Additive-expression', 98)], False, False),
+        98: ([], False, True),
 
-        99: ([("<", 100),("==", 100)], False),
-        100: ([], True),
+        99: ([('<', 100), ('==', 100)], True, False),
+        100: ([], False, True),
 
-        101: ([("Term", 102)], False),
-        102: ([("D", 103)], False),
-        103: ([], True),
+        101: ([('Term', 102)], True, False),
+        102: ([('D', 103)], False, False),
+        103: ([], False, True),
 
-        104: ([("Term-prime", 105)], False),
-        105: ([("D", 106)], False),
-        106: ([], True),
+        104: ([('Term-prime', 105)], True, False),
+        105: ([('D', 106)], False, False),
+        106: ([], False, True),
 
-        107: ([("Term-zegond", 108)], False),
-        108: ([("D", 109)], False),
-        109: ([], True),
+        107: ([('Term-zegond', 108)], True, False),
+        108: ([('D', 109)], False, False),
+        109: ([], False, True),
 
-        110: ([("Addop", 111),("",113)], False),
-        111: ([("Term", 112)], False),
-        112: ([("D", 113)], False),
-        113: ([], True),
+        110: ([('Addop', 111), ('', 113)], True, False),
+        111: ([('Term', 112)], False, False),
+        112: ([('D', 113)], False, False),
+        113: ([], False, True),
 
-        114: ([("+", 115),("-", 115)], False),
-        115: ([], True),
+        114: ([('+', 115), ('-', 115)], True, False),
+        115: ([], False, True),
 
-        116: ([("Factor", 117)], False),
-        117: ([("G", 118)], False),
-        118: ([], True),
+        116: ([('Factor', 117)], True, False),
+        117: ([('G', 118)], False, False),
+        118: ([], False, True),
 
-        119: ([("Factor-prime", 120)], False),
-        120: ([("G", 121)], False),
-        121: ([], True),
+        119: ([('Factor-prime', 120)], True, False),
+        120: ([('G', 121)], False, False),
+        121: ([], False, True),
 
-        122: ([("Factor-zegond", 123)], False),
-        123: ([("G", 124)], False),
-        124: ([], True),
+        122: ([('Factor-zegond', 123)], True, False),
+        123: ([('G', 124)], False, False),
+        124: ([], False, True),
 
-        125: ([("*", 126),("", 128)], False),
-        126: ([("Factor", 127)], False),
-        127: ([("G", 128)], False),
-        128: ([], True),
+        125: ([('*', 126), ('', 128)], True, False),
+        126: ([('Factor', 127)], False, False),
+        127: ([('G', 128)], False, False),
+        128: ([], False, True),
 
-        129: ([("(", 130),("NUM", 132),("ID", 133)], False),
-        130: ([("Expression", 131)], False),
-        131: ([(")", 132)], False),
-        132: ([], True),
-        133: ([("Var-call-prime", 132)], False),
+        129: ([('(', 130), ('NUM', 132), ('ID', 133)], True, False),
+        130: ([('Expression', 131)], False, False),
+        131: ([(')', 132)], False, False),
+        132: ([], False, True),
+        133: ([('Var-call-prime', 132)], False, False),
 
-        134: ([("(", 135),("Var-prime", 137)], False),
-        135: ([("Args", 136)], False),
-        136: ([(")", 137)], False),
-        137: ([], True),
+        134: ([('(', 135), ('Var-prime', 137)], True, False),
+        135: ([('Args', 136)], False, False),
+        136: ([(')', 137)], False, False),
+        137: ([], False, True),
 
-        138: ([("[", 139),("", 141)], False),
-        139: ([("Expression", 140)], False),
-        140: ([("]", 141)], False),
-        141: ([], True),
+        138: ([('[', 139), ('', 141)], True, False),
+        139: ([('Expression', 140)], False, False),
+        140: ([(']', 141)], False, False),
+        141: ([], False, True),
 
-        142: ([("{", 143),("", 145)], False),
-        143: ([("Args", 144)], False),
-        144: ([("}", 145)], False),
-        145: ([], True),
+        142: ([('(', 143), ('', 145)], True, False),
+        143: ([('Args', 144)], False, False),
+        144: ([(')', 145)], False, False),
+        145: ([], False, True),
 
-        146: ([("{", 147),("NUM", 149)], False),
-        147: ([("Expression", 148)], False),
-        148: ([("}", 149)], False),
-        149: ([], True),
+        146: ([('(', 147), ('NUM', 149)], True, False),
+        147: ([('Expression', 148)], False, False),
+        148: ([(')', 149)], False, False),
+        149: ([], False, True),
 
-        150: ([("", 151),("Arg-list", 151)], False),
-        151: ([], True),
+        150: ([('', 151), ('Arg-list', 151)], True, False),
+        151: ([], False, True),
 
-        152: ([("Expression", 153)], False),
-        153: ([("Arg-list-prime", 154)], False),
-        154: ([], True),
+        152: ([('Expression', 153)], True, False),
+        153: ([('Arg-list-prime', 154)], False, False),
+        154: ([], False, True),
 
-        155: ([(",", 156),("", 158)], False),
-        156: ([("Expression", 157)], False),
-        157: ([("Arg-list-prime", 158)], False),
-        158: ([], True),
-    }
-    
+        155: ([(',', 156), ('', 158)], True, False),
+        156: ([('Expression', 157)], False, False),
+        157: ([('Arg-list-prime', 158)], False, False),
+        158: ([], False, True)}
 
     def __init__(self, filepath):
-        self.input_filename = filepath
         self.scanner = Scanner(filepath)
-        self.parse_file = open("parse_tree.txt", 'w')
         self.error_file = open("syntax_errors.txt", 'w')
-        self.look_ahead = self.scanner.next_token()
-
-    def start(self):
-        root_node = Node("Program", False)
-        self.parse(1, root_node)
+        self.look_ahead = ""
+        self.wait_scanner = False
+        self.root_node = None
 
     def write_parse_tree(self, root_node):
-        for pre, fill, node in RenderTree(root_node):
-            print("%s%s" % (pre, node.name))
+        parse_file = open("parse_tree.txt", 'w', encoding='utf-8')
+        anytree_root = self.make_anytree(root_node)
+        root_information = RenderTree(anytree_root).by_attr('name')
+        parse_file.write(root_information)
+        parse_file.close()
+        # root_information = root_information.replace("\n", "\r\n")
+        # print(root_information[10:12].encode())
+        # parse_file.write(bytes(root_information, 'utf-8'))
 
-    def parse(self, state, node):
-        pass
+    def make_anytree(self, root_node: MyNode, parent=-1):
+        if root_node.is_terminal:
+            if root_node.value[-1] != "$":
+                if root_node.value != "epsilon":
+                    value = "(" + root_node.value + ")"
+                else:
+                    value = "epsilon"
+            else:
+                value = "$"
+        else:
+            value = root_node.value
+        if parent == -1:
+            anytree_node = Node(value)
+        else:
+            anytree_node = Node(value, parent=parent)
+        for x in root_node.children:
+            self.make_anytree(x, parent=anytree_node)
+        return anytree_node
 
+    def parse(self):
+        self.root_node = MyNode("Program", False)
+        current_node = self.root_node
+        current_state = 0
+        state_stack = []
+        node_stack = []
+
+        while True:
+            self.look_ahead = self.next_token()
+            # print(current_state, self.look_ahead, state_stack)
+            if self.edges[current_state][2]:
+                if current_state == 2:
+                    break
+                current_state = state_stack.pop()
+                current_node = node_stack.pop()
+                self.wait_scanner = True
+                continue
+
+            l_a_lexeme = self.look_ahead[0] if self.look_ahead[0] in ["ID", "NUM"] else self.look_ahead[1]
+            state_edges = self.edges[current_state][0]
+            error_flag = True
+            for edge in state_edges:
+                if edge[0] == "":
+                    if l_a_lexeme in self.symbols[current_node.symbol]["follow_set"]:
+                        current_node.add_child(MyNode("epsilon", True))
+                        # print("used epsilon")
+                        current_state = edge[1]
+                        self.wait_scanner = True
+                        error_flag = False
+                        break
+                elif l_a_lexeme in self.symbols[edge[0]]["predict_set"]:
+                    error_flag = False
+                    if self.symbols[edge[0]]["is_terminal"]:
+                        current_node.add_child(MyNode(self.look_ahead, True))
+                        current_state = edge[1]
+                        break
+                    else:
+                        current_node.add_child(MyNode(edge[0], False))
+                        state_stack.append(edge[1])
+                        node_stack.append(current_node)
+                        current_state = self.symbols[edge[0]]["start_state"]
+                        current_node = current_node.children[-1]
+                        self.wait_scanner = True
+                        break
+            # continue
+            if error_flag:
+                # print(current_state, self.look_ahead, state_stack)
+                edge = state_edges[0]
+                if self.symbols[edge[0]]["is_terminal"]:
+                    self.error_file.write("#{} : syntax error, missing {}\n".format(self.scanner.current_line, edge[0]))
+                    current_state = edge[1]
+                    self.wait_scanner = True
+                else:
+                    if l_a_lexeme in self.symbols[edge[0]]["follow_set"]:
+                        self.error_file.write(
+                            "#{} : syntax error, missing {}\n".format(self.scanner.current_line, edge[0]))
+                        current_state = edge[1]
+                        self.wait_scanner = True
+                    else:
+                        if self.panic_mode(current_state, current_node):
+                            break
+
+        self.write_parse_tree(self.root_node)
+        if self.error_file.tell() == 0:
+            self.error_file.write("There is no syntax error.")
+
+        self.error_file.close()
+
+    # continues removing tokens .returns True if reaches EOF
     def panic_mode(self, state, node):  # returns true if we should go to next state. else False
-        pass
+        edge = self.edges[state][0][0]
+        while True:
+            l_a_lexeme = self.look_ahead[0] if self.look_ahead[0] in ["ID", "NUM"] else self.look_ahead[1]
+            if l_a_lexeme in self.symbols[edge[0]]["first_set"] or l_a_lexeme in self.symbols[edge[0]]["follow_set"]:
+                self.wait_scanner = True
+                return False
+            if l_a_lexeme == "$":
+                self.error_file.write("#{} : syntax error, Unexpected EOF\n".format(self.scanner.current_line))
+                return True
+            self.error_file.write("#{} : syntax error, illegal {}\n".format(self.scanner.current_line, l_a_lexeme))
+            self.look_ahead = self.next_token()
+
+    def next_token(self):
+        if self.wait_scanner:
+            self.wait_scanner = False
+            return self.look_ahead
+        else:
+            return self.scanner.next_token()
+
+    @staticmethod
+    def compare_files(filepath, read_type="r"):
+        first_file = open(filepath + "/parse_tree.txt", read_type).read()
+        second_file = open("parse_tree.txt", read_type).read()
+        if first_file == second_file:
+            print("equal Parse Tree")
+        else:
+            print("different Parse Tree")
+
+        first_file = open(filepath + "/syntax_errors.txt", read_type).read()
+        second_file = open("syntax_errors.txt", read_type).read()
+        if first_file == second_file:
+            print("equal syntax errors")
+        else:
+            print("different syntax errors")
+
+    @staticmethod
+    def test_all(path_to_test_cases):
+        for i in range(1, 11):
+            filepath = path_to_test_cases + "/T{}/".format(str(i).zfill(2))
+            print("\ntest-case {}".format(str(i).zfill(2)))
+            a = Parser(filepath)
+            a.parse()
+            Parser.compare_files(filepath, "r")
 
 
-class Node_Parser:
-    def __init__(self, value, is_terminal,parent_parser):
-        self.value = Node(value,parent=parent_parser)
-        self.is_terminal = is_terminal
+filepath = ""
+# filepath = "../HW2/Practical/testcases/T08/"
+a = Parser(filepath)
+a.parse()
 
-
-
-# a = Scanner("../HW1/Practical/tests/tests/PA1_input_output_samples/T05/input.txt")
-# a = Compiler("input.txt")
-# while True:
-#     t = a.next_token()
-#     if t == "$":
-#         break
+# Parser.test_all("../HW2/Practical/testcases")
