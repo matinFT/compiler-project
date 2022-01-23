@@ -307,6 +307,16 @@ class Scanner:
         self.file.seek(self.last_pos)
 
 
+class CodeGenerator:
+    def __init__(self):
+        self.semantic_stack = []
+
+    def save(self):
+        pass
+
+
+
+
 class Parser:
     # a dictionary with grammar symbols as it's keys. every key is mapped to another dictionary
     # containing first_set, follow_set, is_terminal attribute of that symbol
@@ -699,37 +709,11 @@ class Parser:
         self.scanner = Scanner(filepath)
         self.error_file = open("syntax_errors.txt", 'w')
         self.look_ahead = ""
+        self.current_token = ""
         self.wait_scanner = False
         self.root_node = None
-
-    def write_parse_tree(self, root_node):
-        parse_file = open("parse_tree.txt", 'w', encoding='utf-8')
-        anytree_root = self.make_anytree(root_node)
-        root_information = RenderTree(anytree_root).by_attr('name')
-        parse_file.write(root_information)
-        parse_file.close()
-        # root_information = root_information.replace("\n", "\r\n")
-        # print(root_information[10:12].encode())
-        # parse_file.write(bytes(root_information, 'utf-8'))
-
-    def make_anytree(self, root_node: MyNode, parent=-1):
-        if root_node.is_terminal:
-            if root_node.value[-1] != "$":
-                if root_node.value != "epsilon":
-                    value = "(" + root_node.value + ")"
-                else:
-                    value = "epsilon"
-            else:
-                value = "$"
-        else:
-            value = root_node.value
-        if parent == -1:
-            anytree_node = Node(value)
-        else:
-            anytree_node = Node(value, parent=parent)
-        for x in root_node.children:
-            self.make_anytree(x, parent=anytree_node)
-        return anytree_node
+        self.symbol_table = []
+        self.scope_stack = []
 
     def parse(self):
         self.root_node = MyNode("Program", False)
@@ -739,8 +723,8 @@ class Parser:
         node_stack = []
 
         while True:
+            self.current_token = self.look_ahead
             self.look_ahead = self.next_token()
-            # print(current_state, self.look_ahead, state_stack)
             if self.edges[current_state][2]:
                 if current_state == 2:
                     break
@@ -775,7 +759,6 @@ class Parser:
                         current_node = current_node.children[-1]
                         self.wait_scanner = True
                         break
-            # continue
             if error_flag:
                 # print(current_state, self.look_ahead, state_stack)
                 edge = state_edges[0]
@@ -798,6 +781,35 @@ class Parser:
             self.error_file.write("There is no syntax error.")
 
         self.error_file.close()
+
+    def write_parse_tree(self, root_node):
+        parse_file = open("parse_tree.txt", 'w', encoding='utf-8')
+        anytree_root = self.make_anytree(root_node)
+        root_information = RenderTree(anytree_root).by_attr('name')
+        parse_file.write(root_information)
+        parse_file.close()
+        # root_information = root_information.replace("\n", "\r\n")
+        # print(root_information[10:12].encode())
+        # parse_file.write(bytes(root_information, 'utf-8'))
+
+    def make_anytree(self, root_node: MyNode, parent=-1):
+        if root_node.is_terminal:
+            if root_node.value[-1] != "$":
+                if root_node.value != "epsilon":
+                    value = "(" + root_node.value + ")"
+                else:
+                    value = "epsilon"
+            else:
+                value = "$"
+        else:
+            value = root_node.value
+        if parent == -1:
+            anytree_node = Node(value)
+        else:
+            anytree_node = Node(value, parent=parent)
+        for x in root_node.children:
+            self.make_anytree(x, parent=anytree_node)
+        return anytree_node
 
     # continues removing tokens .returns True if reaches EOF
     def panic_mode(self, state, node):  # returns true if we should go to next state. else False
@@ -850,5 +862,3 @@ filepath = ""
 # filepath = "../HW2/Practical/testcases/T08/"
 a = Parser(filepath)
 a.parse()
-
-# Parser.test_all("../HW2/Practical/testcases")
