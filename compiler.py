@@ -308,13 +308,31 @@ class Scanner:
 
 
 class CodeGenerator:
-    def __init__(self):
+    def __init__(self, data_start, temp_start, stack_pointer, return_reg):
+        self.PB = [
+            '0\t(ASSIGN, #0, {}, )'.format(stack_pointer),
+            '1\t(ASSIGN, #0, {}, )'.format(return_reg),
+            '2\t(SUB, {}, #1, {})'.format(stack_pointer, stack_pointer),
+            '3\t(PRINT, {}, , )'.format(stack_pointer),
+            '4\t(SUB, {}, #1, {})'.format(stack_pointer, stack_pointer),
+            '5\t(JP, @{}, , )'.format(stack_pointer)
+        ]
         self.semantic_stack = []
+        self.data_end = data_start
+        self.temp_end = temp_start
+        self.sp = stack_pointer
+        self.RR = return_reg
+
+    def get_data_space(self, data_bytes):
+        self.data_end += data_bytes
+        return self.data_end - data_bytes
+
+    def get_temp_space(self, temp_bytes):
+        self.temp_end += temp_bytes
+        return self.temp_end - temp_bytes
 
     def save(self):
         pass
-
-
 
 
 class Parser:
@@ -712,8 +730,13 @@ class Parser:
         self.current_token = ""
         self.wait_scanner = False
         self.root_node = None
-        self.symbol_table = []
-        self.scope_stack = []
+        self.symbol_table = [
+            {"name": "output", "type": "func", "return type": "void", "address": 2, "args": []},
+
+        ]
+        self.code_generator = CodeGenerator(400, 808, 800, 804)
+        self.scope_stack = [0]
+        self.in_func_args = False
 
     def parse(self):
         self.root_node = MyNode("Program", False)
@@ -723,8 +746,8 @@ class Parser:
         node_stack = []
 
         while True:
-            self.current_token = self.look_ahead
             self.look_ahead = self.next_token()
+            self.parser_action(current_state)
             if self.edges[current_state][2]:
                 if current_state == 2:
                     break
@@ -782,6 +805,34 @@ class Parser:
 
         self.error_file.close()
 
+    def parser_action(self, state):
+        if state == 10 or state == 27:
+            self.symbol_table.append({"name": self.look_ahead[1], "type": self.current_token[1]})
+            if self.in_func_args:
+                self.symbol_table[self.in_func_args]["args"].append(self.look_ahead[1])
+        elif state == 15:
+            self.symbol_table[-1]["type"] = "int[]"
+            self.symbol_table[-1]["length"] = int(self.look_ahead[1])
+            self.symbol_table[-1]["init_val"] = self.code_generator.get_data_space(int(self.look_ahead[1])*4)
+        elif state == 18 or state == 29 or state == 33:
+            self.symbol_table[-1]["address"] = self.code_generator.get_data_space(4)
+            self.print_symbol_table()
+        elif state == 20:
+            self.in_func_args = len(self.symbol_table) - 1
+            self.symbol_table[-1]["return type"] = self.symbol_table[-1]["type"]
+            self.symbol_table[-1]["type"] = "func"
+            self.symbol_table[-1]["address"] = len(self.code_generator.PB)
+            self.symbol_table[-1]["args"] = []
+            self.scope_stack.append(len(self.symbol_table))
+        elif state == 22:
+            self.in_func_args = False
+        elif state == 23:
+            if len(self.symbol_table) > self.scope_stack[-1]:
+                self.symbol_table = self.symbol_table[:self.scope_stack[-1]]
+                self.scope_stack.pop()
+        elif state == 39:
+            self.symbol_table[-1]["type"] = "int[]"
+
     def write_parse_tree(self, root_node):
         parse_file = open("parse_tree.txt", 'w', encoding='utf-8')
         anytree_root = self.make_anytree(root_node)
@@ -830,6 +881,7 @@ class Parser:
             self.wait_scanner = False
             return self.look_ahead
         else:
+            self.current_token = self.look_ahead
             return self.scanner.next_token()
 
     @staticmethod
@@ -857,8 +909,13 @@ class Parser:
             a.parse()
             Parser.compare_files(filepath, "r")
 
+    def print_symbol_table(self):
+        print("\n***********")
+        for x in self.symbol_table:
+            print(x)
 
-filepath = ""
-# filepath = "../HW2/Practical/testcases/T08/"
+
+# filepath = ""
+filepath = "../HW3/Practical/TestCases/T2/"
 a = Parser(filepath)
 a.parse()
