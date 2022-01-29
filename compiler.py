@@ -308,9 +308,10 @@ class Scanner:
 
 
 class CodeGenerator:
-    def __init__(self, data_start, temp_start, stack_pointer, return_reg):
+    def __init__(self, data_start, temp_start, stack_start,
+                 stack_pointer, return_reg, temp_reg, parser):
         self.PB = [
-            '0\t(ASSIGN, #0, {}, )'.format(stack_pointer),
+            '0\t(ASSIGN, #{}, {}, )'.format(stack_start, stack_pointer),
             '1\t(ASSIGN, #0, {}, )'.format(return_reg),
             '2\t(SUB, {}, #1, {})'.format(stack_pointer, stack_pointer),
             '3\t(PRINT, {}, , )'.format(stack_pointer),
@@ -322,6 +323,8 @@ class CodeGenerator:
         self.temp_end = temp_start
         self.sp = stack_pointer
         self.RR = return_reg
+        self.temp_reg = temp_reg
+        self.parser = parser
 
     def get_data_space(self, data_bytes):
         self.data_end += data_bytes
@@ -331,8 +334,50 @@ class CodeGenerator:
         self.temp_end += temp_bytes
         return self.temp_end - temp_bytes
 
-    def save(self):
-        pass
+    def generate_code(self, current_state):
+        if current_state == 22:
+            self.func_dec_end()
+        elif current_state == 58:
+            self.save(2)
+        elif current_state == 61:
+            self.jpf_save()
+        elif current_state == 64:
+            self.jp()
+
+    def jpf(self):
+        x = self.semantic_stack.pop()
+        self.PB.append('{}\t(SUB, {}, #1, {})'.format(len(self.PB), self.sp, self.sp))
+        self.PB.append("{}\t(JPF, {}, {}, )".format(len(self.PB), self.sp, x))
+
+    def label(self):
+        self.semantic_stack.append(len(self.PB))
+
+    def func_dec_end(self):
+        args_address = [x["address"] for x in self.symbol_table[self.parer.last_func]["args"]]
+        if len(args_address) > 0:
+            for i in range(len(args_address)-1, -1, -1):
+                self.PB.append('{}\t(SUB, {}, #1, {})'.format(len(self.PB), self.sp, self.sp))
+                self.PB.append('{}\t(ASSIGN, {}, {}, )'.format(len(self.PB), self.sp, args_address[i]))
+
+    def save(self, x):
+        self.semantic_stack.append(len(self.PB))
+        for i in range(x):
+            self.PB.append("")
+
+    def jpf_save(self):
+        x = self.semantic_stack.pop()
+        self.PB[x] = '{}\t(SUB, {}, #1, {})'.format(x, self.sp, self.sp)
+        self.PB[x+1] = "{}\t(JPF, {}, {}, )".format(x+1, self.sp, len(self.PB) + 1)
+        self.save(1)
+
+    def jp(self):
+        x = self.semantic_stack.pop()
+        self.PB[x] = '{}\t(JP, {}, , )'.format(x, len(self.PB))
+
+    # pushes x to run-time stack
+    def push(self, x):
+        self.PB.append("{}\t(ASSIGN, {}, {}, )".format(len(self.PB), x, self.sp))
+        self.PB.append('2\t(ADD, {}, #1, {})'.format(self.sp, self.sp))
 
 
 class Parser:
@@ -734,9 +779,10 @@ class Parser:
             {"name": "output", "type": "func", "return type": "void", "address": 2, "args": []},
 
         ]
-        self.code_generator = CodeGenerator(400, 808, 800, 804)
+        self.code_generator = CodeGenerator(400, 812, 1200, 800, 804, 808, self)
         self.scope_stack = [0]
         self.in_func_args = False
+        self.last_func = None
 
     def parse(self):
         self.root_node = MyNode("Program", False)
@@ -809,16 +855,17 @@ class Parser:
         if state == 10 or state == 27:
             self.symbol_table.append({"name": self.look_ahead[1], "type": self.current_token[1]})
             if self.in_func_args:
-                self.symbol_table[self.in_func_args]["args"].append(self.look_ahead[1])
+                self.symbol_table[self.last_func]["args"].append(self.symbol_table[-1])
         elif state == 15:
             self.symbol_table[-1]["type"] = "int[]"
             self.symbol_table[-1]["length"] = int(self.look_ahead[1])
             self.symbol_table[-1]["init_val"] = self.code_generator.get_data_space(int(self.look_ahead[1])*4)
         elif state == 18 or state == 29 or state == 33:
             self.symbol_table[-1]["address"] = self.code_generator.get_data_space(4)
-            self.print_symbol_table()
+            # self.print_symbol_table()
         elif state == 20:
-            self.in_func_args = len(self.symbol_table) - 1
+            self.in_func_args = True
+            self.last_func = len(self.symbol_table) - 1
             self.symbol_table[-1]["return type"] = self.symbol_table[-1]["type"]
             self.symbol_table[-1]["type"] = "func"
             self.symbol_table[-1]["address"] = len(self.code_generator.PB)
@@ -832,6 +879,12 @@ class Parser:
                 self.scope_stack.pop()
         elif state == 39:
             self.symbol_table[-1]["type"] = "int[]"
+
+    def get_func_args_addresses(self, function_name):
+        for i in range(len(self.symbol_table)):
+            if self.symbol_table[i]["name"] == function_name:
+                return [x["address"] for x in self.symbol_table[i]["args"]]
+        return None
 
     def write_parse_tree(self, root_node):
         parse_file = open("parse_tree.txt", 'w', encoding='utf-8')
